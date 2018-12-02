@@ -1,7 +1,7 @@
-#include <QtWidgets/QApplication>
 #include "mainWindow.h"
 #include "scene3d.h"
-#include "stdlib.h"
+#include <stdlib.h>
+#include <QtWidgets/QApplication>
 
 // Entry point of application
 int main(int argc, char** argv)
@@ -12,7 +12,7 @@ int main(int argc, char** argv)
     MainWindow window;
 
     // Set title and size of new window
-    window.setWindowTitle("Skeleton Viewer");
+    window.setWindowTitle("Mesh Viewer");
     window.resize(800, 600);
 
     // Show and activate window

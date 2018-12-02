@@ -27,14 +27,15 @@ SOURCES += \
     main.cpp \
     functions.cpp \
     mainWindow.cpp \
-    scene3d.cpp
+    scene3d.cpp \
+    common.cpp
 
 HEADERS += \
     functions.h \
     mainWindow.h \
-    scene3d.h
+    scene3d.h \
+    common.h
 
 FORMS += \
     scene3d.ui
 
-LIBS += -lgmp -lmpfr -lCGAL
