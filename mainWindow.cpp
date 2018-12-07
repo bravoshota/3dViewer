@@ -51,11 +51,11 @@ MainWindow::MainWindow()
     connect(action, &QAction::toggled, this, &MainWindow::setDockOptions);
 }
 
-// Open the STL and OFF files
+// Open the STL file
 void MainWindow::openModel()
 {
     // get the filename using the standard Qt file dialog
-    QString fileName = QFileDialog::getOpenFileName(this, "Load", QDir::currentPath(), "Models (*.stl);;Models (*.off)");
+    QString fileName = QFileDialog::getOpenFileName(this, "Load", QDir::currentPath(), "Models (*.stl)");
     // extract the file extension
     QString ext = fileName.right(3);
 
@@ -69,7 +69,7 @@ void MainWindow::openModel()
         {
             std::vector<Vertex> vertices;
             std::vector<Triangle> faces;
-            binStl2Off(fileName.toLatin1().data(), vertices, faces);
+            openStlBin(fileName.toLatin1().data(), vertices, faces);
             widget->setData(std::move(vertices), std::move(faces));
         }
         // if type is ascii
@@ -77,7 +77,7 @@ void MainWindow::openModel()
         {
             std::vector<Vertex> vertices;
             std::vector<Triangle> faces;
-            ascStl2Off(fileName.toLatin1().data(), vertices, faces);
+            openStlAsc(fileName.toLatin1().data(), vertices, faces);
             widget->setData(std::move(vertices), std::move(faces));
         }
         // unrecognized type of STL

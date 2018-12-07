@@ -9,12 +9,13 @@
 
 // utility object (the vertex)
 struct Vertex {
-    float x;
-    float y;
-    float z;
+    double x;
+    double y;
+    double z;
     // initiate the point with coordinates
     Vertex();
-    Vertex(float xp, float yp, float zp);
+    Vertex(double xp, double yp, double zp);
+    Vertex(float *coords);
 };
 
 // output method of point

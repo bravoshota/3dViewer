@@ -47,7 +47,7 @@ void Scene3D::resizeGL(int nWidth, int nHeight)
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     // choose the most problem direction
-    GLfloat ratio = (GLfloat)nHeight / (GLfloat)nWidth;
+    GLdouble ratio = static_cast<GLdouble>(nHeight)/nWidth;
     if (nWidth >= nHeight)
         // change the matrix using horizontal ratio
         glOrtho(-1.0 / ratio, 1.0 / ratio, -1.0, 1.0, -10.0, 1.0);
@@ -55,7 +55,7 @@ void Scene3D::resizeGL(int nWidth, int nHeight)
         // change the matrix using vertical ratio
         glOrtho(-1.0, 1.0, -1.0*ratio, 1.0*ratio, -10.0, 1.0);
     // transform to window coordinates
-    glViewport(0, 0, (GLint)nWidth, (GLint)nHeight);
+    glViewport(0, 0, nWidth, nHeight);
 }
 
 // Draw the scene
@@ -67,13 +67,13 @@ void Scene3D::paintGL()
     // reset the transformation matrix to identity
     glLoadIdentity();
     // apply the scale
-    glScalef(nSca, nSca, nSca);
+    glScaled(nSca, nSca, nSca);
     // apply the translation
-    glTranslatef(0.0f, zTra, 0.0f);
+    glTranslated(0.0, zTra, 0.0);
     // apply the rotations
-    glRotatef(xRot, 1.0f, 0.0f, 0.0f);
-    glRotatef(yRot, 0.0f, 1.0f, 0.0f);
-    glRotatef(zRot, 0.0f, 0.0f, 1.0f);
+    glRotated(xRot, 1.0, 0.0, 0.0);
+    glRotated(yRot, 0.0, 1.0, 0.0);
+    glRotated(zRot, 0.0, 0.0, 1.0);
 
     // draw the elements using the 'elements visibility' variable
     if (showElem & shAxis) drawAxis();
@@ -97,9 +97,9 @@ void Scene3D::mouseReleaseEvent(QMouseEvent* /*pe*/)
 void Scene3D::mouseMoveEvent(QMouseEvent* pe)
 {
     // calculate rotation by X axis
-    xRot += 180 / nSca * (GLfloat)(pe->y() - ptrMousePosition.y()) / height();
+    xRot += 180.0 / nSca * static_cast<GLdouble>(pe->y() - ptrMousePosition.y()) / height();
     // calculate rotation by Z axis
-    zRot += 180 / nSca * (GLfloat)(pe->x() - ptrMousePosition.x()) / width();
+    zRot += 180.0 / nSca * static_cast<GLdouble>(pe->x() - ptrMousePosition.x()) / width();
     // save the mouse position
     ptrMousePosition = pe->pos();
     // draw the scene
@@ -140,33 +140,33 @@ void Scene3D::scale_minus()
 // rotation
 void Scene3D::rotate_up()
 {
-    xRot += 1.0f;
+    xRot += 1.0;
 }
 
 void Scene3D::rotate_down()
 {
-    xRot -= 1.0f;
+    xRot -= 1.0;
 }
 
 void Scene3D::rotate_left()
 {
-    zRot += 1.0f;
+    zRot += 1.0;
 }
 
 void Scene3D::rotate_right()
 {
-    zRot -= 1.0f;
+    zRot -= 1.0;
 }
 
 // translation
 void Scene3D::translate_down()
 {
-    zTra -= 0.05f;
+    zTra -= 0.05;
 }
 
 void Scene3D::translate_up()
 {
-    zTra += 0.05f;
+    zTra += 0.05;
 }
 
 // reset to default
@@ -221,12 +221,12 @@ void Scene3D::load()
     m_color.resize(4 * m_vertices.size());
 
     // initiate the maximum and minimum values of X, Y and Z
-    float mx = FLT_MAX;
-    float my = FLT_MAX;
-    float mz = FLT_MAX;
-    float Mx =-FLT_MAX;
-    float My =-FLT_MAX;
-    float Mz =-FLT_MAX;
+    double mx = DBL_MAX;
+    double my = DBL_MAX;
+    double mz = DBL_MAX;
+    double Mx =-DBL_MAX;
+    double My =-DBL_MAX;
+    double Mz =-DBL_MAX;
     // loop over the parts
     for (size_t i = 0; i < m_vertices.size(); ++i)
     {
@@ -245,10 +245,10 @@ void Scene3D::load()
         if (Mz < p.z)
             Mz = p.z;
 
-        m_color[4*i + 0] = 0.5f;
-        m_color[4*i + 1] = 0.7f;
-        m_color[4*i + 2] = 0.5f;
-        m_color[4*i + 3] = 0.3f;
+        m_color[4*i + 0] = 50;
+        m_color[4*i + 1] = 170;
+        m_color[4*i + 2] = 128;
+        m_color[4*i + 3] = 90;
     }
 
     // define the middle point
@@ -257,9 +257,9 @@ void Scene3D::load()
     cz = (mz + Mz) / 2;
 
     // calculate the lowest ratio
-    if (Mx != mx) asp = 1 / (Mx - mx);
-    if (My != my) { if (1 / (My - my) < asp) asp = 1 / (My - my); }
-    if (Mz != mz) { if (1 / (Mz - mz) < asp) asp = 1 / (Mz - mz); }
+    if (Mx - mx <= DBL_EPSILON) asp = 1 / (Mx - mx);
+    if (My - my <= DBL_EPSILON) { if (1 / (My - my) < asp) asp = 1 / (My - my); }
+    if (Mz - mz <= DBL_EPSILON) { if (1 / (Mz - mz) < asp) asp = 1 / (Mz - mz); }
 }
 
 void Scene3D::keyPressEvent(QKeyEvent *pe)
@@ -289,11 +289,11 @@ void Scene3D::drawFacets()
     if (m_vertices.empty())
         return;
     // set the vertices
-    glVertexPointer(3, GL_FLOAT, 0, m_vertices.data());
+    glVertexPointer(3, GL_DOUBLE, 0, m_vertices.data());
     // set the colors
-    glColorPointer(4, GL_FLOAT, 0, m_color.data());
+    glColorPointer(4, GL_UNSIGNED_BYTE, 0, m_color.data());
     // set the facets
-    glDrawElements(GL_TRIANGLES, 3*m_faces.size(), GL_UNSIGNED_INT, m_faces.data());
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(3*m_faces.size()), GL_UNSIGNED_INT, m_faces.data());
 }
 
 // Draw the wireframe of mesh
@@ -306,9 +306,9 @@ void Scene3D::drawWireframe()
     // set the line width
     glLineWidth(2.0f);
     // set the vertices
-    glVertexPointer(3, GL_FLOAT, 0, m_vertices.data());
+    glVertexPointer(3, GL_DOUBLE, 0, m_vertices.data());
     // set the colors
-    glColorPointer(4, GL_FLOAT, 0, EdgeColor);
+    glColorPointer(4, GL_BYTE, 0, EdgeColor);
     // set the edges
     glDrawElements(GL_LINES, 6 * fmesh, GL_UNSIGNED_INT, EdgeIndex);
     */

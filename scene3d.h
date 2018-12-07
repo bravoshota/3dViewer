@@ -12,19 +12,19 @@ class Scene3D : public QGLWidget
 private:
     std::vector<Vertex> m_vertices;
     std::vector<Triangle> m_faces;
-    std::vector<float> m_color;
+    std::vector<uint8_t> m_color;
 
-    GLfloat xRot;				// the rotation angle of X axis
-	GLfloat yRot;				// the rotation angle of Y axis
-	GLfloat zRot;				// the rotation angle of Z axis
-	GLfloat zTra;				// translation by Z axis
-	GLfloat nSca;				// scale of image
+    GLdouble xRot;				// the rotation angle of X axis
+    GLdouble yRot;				// the rotation angle of Y axis
+    GLdouble zRot;				// the rotation angle of Z axis
+    GLdouble zTra;				// translation by Z axis
+    GLdouble nSca;				// scale of image
 
-	GLfloat asp;				// aspect ratio to set the maximum distance from mesh surface to origin equal to one
+    GLdouble asp;				// aspect ratio to set the maximum distance from mesh surface to origin equal to one
 	// shifts to set the center of mesh on the point of origin
-	GLfloat cx;					// shift by X axis
-	GLfloat cy;					// shifh by Y axis
-	GLfloat cz;					// shift by Z axis
+    GLdouble cx;					// shift by X axis
+    GLdouble cy;					// shifh by Y axis
+    GLdouble cz;					// shift by Z axis
 	QPoint ptrMousePosition;	// the last saved mouse position
 
 	void scale_plus();

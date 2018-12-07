@@ -4,10 +4,17 @@ Vertex::Vertex() : x(0), y(0), z(0)
 {
 }
 
-Vertex::Vertex(float xp, float yp, float zp)
+Vertex::Vertex(double xp, double yp, double zp)
     : x(xp)
     , y(yp)
     , z(zp)
+{
+}
+
+Vertex::Vertex(float *coords)
+    : x(static_cast<double>(coords[0]))
+    , y(static_cast<double>(coords[1]))
+    , z(static_cast<double>(coords[2]))
 {
 }
 

@@ -8,8 +8,6 @@
 #include <QByteArray>
 #include <QDataStream>
 #include <QMessageBox>
-#include <boost/cstdint.hpp>
-#include <boost/tuple/tuple.hpp>
 #include <boost/algorithm/string.hpp>
 #include <iostream>
 #include <fstream>
@@ -32,7 +30,7 @@ int getStlFileFormat(const QString &path)
     }
     // get the size of file (bytes)
     QFileInfo fileInfo(path);
-    size_t fileSize = fileInfo.size();
+    size_t fileSize = static_cast<size_t>(fileInfo.size());
 
     // check the size of file
     if (fileSize < 15)
@@ -94,7 +92,7 @@ int getStlFileFormat(const QString &path)
     }
 
     // convert to int
-    uint32_t nTriangles = *((uint32_t*)nTrianglesBytes.data());
+    uint32_t nTriangles = *reinterpret_cast<uint32_t*>(nTrianglesBytes.data());
     // check the length of file (header + facets)
     if (fileSize == (84 + (nTriangles * 50)))
         // if proper return binary type
@@ -104,8 +102,8 @@ int getStlFileFormat(const QString &path)
     return STL_INVALID;
 }
 
-// convert ascii STL to OFF
-bool ascStl2Off(char *filename, std::vector<Vertex> &vertices, std::vector<Triangle> &faces)
+// open STL asci file format
+bool openStlAsc(char *filename, std::vector<Vertex> &vertices, std::vector<Triangle> &faces)
 {
     // input variables:
     // filename - the path of file to load
@@ -117,9 +115,6 @@ bool ascStl2Off(char *filename, std::vector<Vertex> &vertices, std::vector<Trian
     char str[buffsize];
     char tstr[buffsize];
 
-    // initiate the arrays of vertices and facets
-    unsigned int number_of_points = 0;
-\
     // read the first line
     obj.getline(str, buffsize);
 
@@ -161,10 +156,10 @@ bool ascStl2Off(char *filename, std::vector<Vertex> &vertices, std::vector<Trian
                 // split the buffer by spaces
                 std::vector<std::string> entities;
                 boost::split(entities, tstr, boost::is_any_of(" "), boost::token_compress_on);
-                // convert coordinates into float numbers (skip the "vertex" which has zero index)
-                float x = stof(entities[1]);
-                float y = stof(entities[2]);
-                float z = stof(entities[3]);
+                // convert coordinates into double numbers (skip the "vertex" which has zero index)
+                double x = stod(entities[1]);
+                double y = stod(entities[2]);
+                double z = stod(entities[3]);
 
                 // initiate the checker of the vertex is already exist
                 bool found_close_point = false;
@@ -172,14 +167,14 @@ bool ascStl2Off(char *filename, std::vector<Vertex> &vertices, std::vector<Trian
                 for (size_t k = 0; k < vertices.size(); k++) {
 
                     // check does the distance by X axis lower than eps (little constant)
-                    float dx = x - vertices[k].x;
-                    if (dx > -1E-5 && dx < 1E-5) {
+                    double dx = fabs(x - vertices[k].x);
+                    if (dx < 1E-5) {
                         // check does the distance by Y axis lower than eps (little constant)
-                        float dy = y - vertices[k].y;
-                        if (dy > -1E-5 && dy < 1E-5) {
+                        double dy = fabs(y - vertices[k].y);
+                        if (dy < 1E-5) {
                             // check does the distance by Z axis lower than eps (little constant)
-                            float dz = z - vertices[k].z;
-                            if (dz > -1E-5 && dz < 1E-5) {
+                            double dz = fabs(z - vertices[k].z);
+                            if (dz < 1E-5) {
                                 // the current vertex is close to existing one, set it into facet
                                 index[j] = k;
                                 found_close_point = true;
@@ -191,13 +186,10 @@ bool ascStl2Off(char *filename, std::vector<Vertex> &vertices, std::vector<Trian
 
                 // the current vertex is not close to any existing
                 if (!found_close_point) {
-                    // create new vertex
-                    Vertex p(x, y, z);
-                    // add it to array
-                    vertices.push_back(p);
                     // set the index of new vertex into facet
-                    index[j] = number_of_points;
-                    ++number_of_points;
+                    index[j] = vertices.size();
+                    // add it to array
+                    vertices.push_back({x, y, z});
                 }
             }
 
@@ -213,7 +205,7 @@ bool ascStl2Off(char *filename, std::vector<Vertex> &vertices, std::vector<Trian
 }
 
 // convert binary STL to OFF
-bool binStl2Off(char *filename, std::vector<Vertex> &vertices, std::vector<Triangle> &faces)
+bool openStlBin(char *filename, std::vector<Vertex> &vertices, std::vector<Triangle> &faces)
 {
     // input variables:
     // filename - the path of file to load
@@ -222,52 +214,46 @@ bool binStl2Off(char *filename, std::vector<Vertex> &vertices, std::vector<Trian
     std::ifstream obj(filename, std::ios::in | std::ios::binary);
     // skip the header
     for (int i = 0; i < 80; i++) {
-        boost::uint8_t c;
+        uint8_t c;
         obj.read(reinterpret_cast<char*>(&c), sizeof(c));
     }
 
     // read the number of facets
-    boost::uint32_t N32;
+    uint32_t N32;
     obj.read(reinterpret_cast<char*>(&N32), sizeof(N32));
     unsigned int N = N32;
 
     // initiate the arrays of vertices and facets
     faces.reserve(N);
-    unsigned int number_of_points = 0;
 
     // loop over facets
-    for (int i = 0; i < (int)N; i++) {
-        std::cout << i << std::endl;
+    for (unsigned int i = 0; i < N; i++) {
         // initiate the new normal
         float normal[3];
         // read the floats (normal coordinates) from binary
-        obj.read(reinterpret_cast<char*>(&normal[0]), sizeof(normal[0]));
-        obj.read(reinterpret_cast<char*>(&normal[1]), sizeof(normal[1]));
-        obj.read(reinterpret_cast<char*>(&normal[2]), sizeof(normal[2]));
+        obj.read(reinterpret_cast<char*>(normal), sizeof(normal));
 
         // initiate the new facet
         unsigned int index[3];
         // loop over facet's vertices
         for (int j = 0; j < 3; j++) {
             // read the floats (vertex coordinates) from binary
-            float x, y, z;
-            obj.read(reinterpret_cast<char*>(&x), sizeof(x));
-            obj.read(reinterpret_cast<char*>(&y), sizeof(y));
-            obj.read(reinterpret_cast<char*>(&z), sizeof(z));
+            float coords[3];
+            obj.read(reinterpret_cast<char*>(coords), sizeof(coords));
 
             // initiate the checker of the vertex is already exist
             bool found_close_point = false;
             // loop over previous vertices
             for (size_t k = 0; k < vertices.size(); k++) {
                 // check does the distance by X axis lower than eps (little constant)
-                float dx = x - vertices[k].x;
-                if (dx > -1E-5 && dx < 1E-5) {
+                double dx = fabs(static_cast<double>(coords[0]) - vertices[k].x);
+                if (dx < 1E-5) {
                     // check does the distance by Y axis lower than eps (little constant)
-                    float dy = y - vertices[k].y;
-                    if (dy > -1E-5 && dy < 1E-5) {
+                    double dy = fabs(static_cast<double>(coords[1]) - vertices[k].y);
+                    if (dy < 1E-5) {
                         // check does the distance by Z axis lower than eps (little constant)
-                        float dz = z - vertices[k].z;
-                        if (dz > -1E-5 && dz < 1E-5) {
+                        double dz = fabs(static_cast<double>(coords[2]) - vertices[k].z);
+                        if (dz < 1E-5) {
                             // the current vertex is close to existing one, set it into facet
                             index[j] = k;
                             found_close_point = true;
@@ -279,22 +265,18 @@ bool binStl2Off(char *filename, std::vector<Vertex> &vertices, std::vector<Trian
 
             // the current vertex is not close to any existing
             if (!found_close_point) {
-                // create new vertex
-                Vertex p(x, y, z);
-                // add it to array
-                vertices.push_back(p);
                 // set the index of new vertex into facet
-                index[j] = number_of_points;
-                ++number_of_points;
+                index[j] = vertices.size();
+                // add it to array
+                vertices.push_back(coords);
             }
         }
 
         // add new facet into array
         faces.push_back({index[0], index[1], index[2]});
         // skip the end of facet
-        char c;
-        obj.read(reinterpret_cast<char*>(&c), sizeof(c));
-        obj.read(reinterpret_cast<char*>(&c), sizeof(c));
+        char c[2];
+        obj.read(reinterpret_cast<char*>(c), sizeof(c));
     }
 
     return true;
