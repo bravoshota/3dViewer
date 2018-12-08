@@ -49,40 +49,40 @@ MainWindow::MainWindow()
     action->setChecked(false);
     action->setEnabled(false);
     connect(action, &QAction::toggled, this, &MainWindow::setDockOptions);
+
+    m_lastOpenedDir = QDir::currentPath();
 }
 
 // Open the STL file
 void MainWindow::openModel()
 {
     // get the filename using the standard Qt file dialog
-    QString fileName = QFileDialog::getOpenFileName(this, "Load", QDir::currentPath(), "Models (*.stl)");
+    QString fileName = QFileDialog::getOpenFileName(this, "Load",
+                                                    m_lastOpenedDir.absolutePath(),
+                                                    "Models (*.stl)");
+    if (fileName.isEmpty())
+        return;
+
+    QFileInfo fInfo(fileName);
+    m_lastOpenedDir = fInfo.absoluteDir();
+
     // extract the file extension
     QString ext = fileName.right(3);
 
     // if the file is STL
     if (QString::compare(ext, "stl", Qt::CaseInsensitive) == 0)
     {
+        std::vector<common::Vertex> vertices;
+        std::vector<common::Triangle> faces;
+
         // check the type of STL (ascii or binary)
         int type = getStlFileFormat(fileName);
-        // if type is binary
-        if (type == STL_BINARY)
-        {
-            std::vector<common::Vertex> vertices;
-            std::vector<common::Triangle> faces;
+        if (type == STL_BINARY) {
             openStlBin(fileName.toLatin1().data(), vertices, faces);
-            widget->setData(std::move(vertices), std::move(faces));
-        }
-        // if type is ascii
-        else if (type == STL_ASCII)
-        {
-            std::vector<common::Vertex> vertices;
-            std::vector<common::Triangle> faces;
+        } else
+        if (type == STL_ASCII) {
             openStlAsc(fileName.toLatin1().data(), vertices, faces);
-            widget->setData(std::move(vertices), std::move(faces));
-        }
-        // unrecognized type of STL
-        else {
-            // show the error message
+        } else {
             QMessageBox msgBox;
             msgBox.setText("This file corrupt and cannot be loaded");
             msgBox.setInformativeText("STL Load");
@@ -90,8 +90,10 @@ void MainWindow::openModel()
             msgBox.exec();
             return;
         }
+        widget->setData(std::move(vertices), std::move(faces));
+        widget->load();
     }
-    widget->load();
+
     // set it as central widget of window
     setFigureOn();
 }
@@ -121,17 +123,17 @@ void MainWindow::setDockOptions()
     // use the 'Elements' menu
     QList<QAction*> actions = menuOptions->actions();
     // initiate variable with zero
-    widget->showElem = 0;
+    widget->m_showMask = 0;
 
     // set the mask of 'Axis' item
     if (actions.at(0)->isChecked())
-        widget->showElem |= shAxis;
+        widget->m_showMask |= shAxis;
     // set the mask of 'Wireframe' item
     if (actions.at(1)->isChecked())
-        widget->showElem |= shWireframe;
+        widget->m_showMask |= shWireframe;
     // set the mask of 'Facets' item
     if (actions.at(2)->isChecked())
-        widget->showElem |= shFacets;
+        widget->m_showMask |= shFacets;
 
     // update the showed elements
     widget->update();
@@ -139,5 +141,9 @@ void MainWindow::setDockOptions()
 
 void MainWindow::keyPressEvent(QKeyEvent *pe)
 {
-    return widget->keyPressEvent(pe);
+    switch (pe->key())
+    {
+    case Qt::Key_N: openModel(); break;
+    default: widget->keyPressEvent(pe); break;
+    }
 }

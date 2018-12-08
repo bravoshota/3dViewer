@@ -15,28 +15,30 @@ private:
     std::vector<common::Edge> m_edges;
     std::vector<uint8_t> m_color;
 
-    GLdouble xRot;				// the rotation angle of X axis
-    GLdouble yRot;				// the rotation angle of Y axis
-    GLdouble zRot;				// the rotation angle of Z axis
-    GLdouble zTra;				// translation by Z axis
-    GLdouble nSca;				// scale of image
+    GLdouble m_rotateX;				// the rotation angle of X axis
+    GLdouble m_rotateY;				// the rotation angle of Y axis
+    GLdouble m_rotateZ;				// the rotation angle of Z axis
+    GLdouble m_translX;				// translation by Z axis
+    GLdouble m_translZ;				// translation by Z axis
+    GLdouble m_scale;				// scale of image
+    GLdouble m_scaleDefault;        // default scale for the model
 
-    GLdouble asp;				// aspect ratio to set the maximum distance from mesh surface to origin equal to one
 	// shifts to set the center of mesh on the point of origin
-    GLdouble cx;					// shift by X axis
-    GLdouble cy;					// shifh by Y axis
-    GLdouble cz;					// shift by Z axis
 	QPoint ptrMousePosition;	// the last saved mouse position
 
-	void scale_plus();
-	void scale_minus();
-	void rotate_up();
-	void rotate_down();
-	void rotate_left();
-	void rotate_right();
-	void translate_down();
-	void translate_up();
-	void defaultScene();
+    void scaleUp();
+    void scaleDown();
+    void rotateUpX();
+    void rotateDownX();
+    void rotateUpY();
+    void rotateDownY();
+    void rotateUpZ();
+    void rotateDownZ();
+    void translateDown();
+    void translateUp();
+    void translateLeft();
+    void translateRight();
+    void defaultScene();
 
 	void drawAxis();
     void drawWireframe();
@@ -58,5 +60,5 @@ public:
     void load();
     void keyPressEvent(QKeyEvent* pe) override;
 
-    int showElem;
+    int m_showMask;
 };

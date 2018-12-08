@@ -11,12 +11,8 @@
 // Initiation of Scene3D object
 Scene3D::Scene3D(QWidget* parent) : QGLWidget(parent)
 {
-    // default values of parameters
-    xRot = -90;
-    yRot = 0;
-    zRot = 0;
-    zTra = 0;
-    nSca = 1;
+    m_scaleDefault = 1;
+    defaultScene();
 }
 
 // Initiation of OpenGL
@@ -66,18 +62,19 @@ void Scene3D::paintGL()
     // reset the transformation matrix to identity
     glLoadIdentity();
     // apply the scale
-    glScaled(nSca, nSca, nSca);
+    glScaled(m_scale, m_scale, m_scale);
     // apply the translation
-    glTranslated(0.0, zTra, 0.0);
+    glTranslated(m_translX, 0.0, 0.0);
+    glTranslated(0.0, m_translZ, 0.0);
     // apply the rotations
-    glRotated(xRot, 1.0, 0.0, 0.0);
-    glRotated(yRot, 0.0, 1.0, 0.0);
-    glRotated(zRot, 0.0, 0.0, 1.0);
+    glRotated(m_rotateX, 1.0, 0.0, 0.0);
+    glRotated(m_rotateY, 0.0, 1.0, 0.0);
+    glRotated(m_rotateZ, 0.0, 0.0, 1.0);
 
     // draw the elements using the 'elements visibility' variable
-    if (showElem & shAxis) drawAxis();
-    if (showElem & shWireframe) drawWireframe();
-    if (showElem & shFacets) drawFacets();
+    drawAxis();
+    drawWireframe();
+    drawFacets();
 }
 
 // Set the initial position of actions doing by mouse
@@ -96,9 +93,9 @@ void Scene3D::mouseReleaseEvent(QMouseEvent* /*pe*/)
 void Scene3D::mouseMoveEvent(QMouseEvent* pe)
 {
     // calculate rotation by X axis
-    xRot += 180.0 / nSca * static_cast<GLdouble>(pe->y() - ptrMousePosition.y()) / height();
+    m_rotateX += 180.0 * static_cast<GLdouble>(pe->y() - ptrMousePosition.y()) / height();
     // calculate rotation by Z axis
-    zRot += 180.0 / nSca * static_cast<GLdouble>(pe->x() - ptrMousePosition.x()) / width();
+    m_rotateZ += 180.0 * static_cast<GLdouble>(pe->x() - ptrMousePosition.x()) / width();
     // save the mouse position
     ptrMousePosition = pe->pos();
     // draw the scene
@@ -110,24 +107,138 @@ void Scene3D::wheelEvent(QWheelEvent* pe)
 {
     // choose the scale method
     if ((pe->delta()) > 0)
-        scale_plus();
+        scaleUp();
     else if ((pe->delta()) < 0)
-        scale_minus();
+        scaleDown();
 
     // draw the scene
     updateGL();
 }
 
-// The controls actions of the scene
-// zoom
+void Scene3D::scaleUp()
+{
+    m_scale = m_scale * 1.1;
+    if (m_scale > 1e+20)
+        m_scale = 1e+20;
+}
+
+void Scene3D::scaleDown()
+{
+    m_scale = m_scale/1.1;
+    if (m_scale < 1e-5)
+        m_scale = 1e-5;
+}
+
+// rotation
+void Scene3D::rotateUpX()
+{
+    m_rotateX += 1.0;
+}
+
+void Scene3D::rotateDownX()
+{
+    m_rotateX -= 1.0;
+}
+
+void Scene3D::rotateUpY()
+{
+    m_rotateY += 1.0;
+}
+
+void Scene3D::rotateDownY()
+{
+    m_rotateY -= 1.0;
+}
+
+void Scene3D::rotateUpZ()
+{
+    m_rotateZ += 1.0;
+}
+
+void Scene3D::rotateDownZ()
+{
+    m_rotateZ -= 1.0;
+}
+
+// translation
+void Scene3D::translateDown()
+{
+    m_translZ -= 0.05/m_scale;
+}
+
+void Scene3D::translateUp()
+{
+    m_translZ += 0.05/m_scale;
+}
+
+void Scene3D::translateLeft()
+{
+    m_translX -= 0.05/m_scale;
+}
+
+void Scene3D::translateRight()
+{
+    m_translX += 0.05/m_scale;
+}
+
+// reset to default
+void Scene3D::defaultScene()
+{
+    m_rotateX =-90;
+    m_rotateY = 0;
+    m_rotateZ = 0;
+    m_translX = 0;
+    m_translZ = 0;
+    m_scale = m_scaleDefault;
+}
+
+// Draw the axis
+void Scene3D::drawAxis() 
+{
+    if(!(m_showMask & shAxis))
+        return;
+
+    // set the line width
+    glLineWidth(3.0f);
+    // set the mode to 'lines'
+    glBegin(GL_LINES);
+
+    const double axisLen = 0.2/m_scale;
+
+    // the X axis
+    glColor3ub(255, 0, 0);
+    glVertex3d( axisLen, 0.0, 0.0);
+    glVertex3d(-axisLen, 0.0, 0.0);
+    // the Y axis
+    glColor3d(0, 255, 0);
+    glVertex3d(0.0, axisLen, 0.0);
+    glVertex3d(0.0,-axisLen, 0.0);
+    // the Z axis
+    glColor3ub(0, 0, 255);
+    glVertex3d(0.0, 0.0, axisLen);
+    glVertex3d(0.0, 0.0,-axisLen);
+
+    // end of the 'lines' mode
+    glEnd();
+}
+
 void Scene3D::setData(std::vector<common::Vertex> &&vertices,
                       std::vector<common::Triangle> &&faces)
 {
     std::swap(m_vertices, vertices);
     std::swap(m_faces, faces);
+}
 
-    // calculate here wireframe
-    m_edges.reserve(faces.size());
+// Calculate the aspect ratio of given mesh
+void Scene3D::load()
+{
+    // if we have no vertices return
+    if (m_vertices.empty())
+        return;
+
+    // calculate wireframe
+    m_edges.clear();
+    m_edges.reserve(m_faces.size());
     std::unordered_set<uint64_t> pairs;
     for (const common::Triangle &tri : m_faces)
     {
@@ -150,97 +261,6 @@ void Scene3D::setData(std::vector<common::Vertex> &&vertices,
             m_edges.push_back({i1, i2});
         }
     }
-}
-
-void Scene3D::scale_plus()
-{
-    nSca = nSca * 1.1;
-}
-
-void Scene3D::scale_minus()
-{
-    nSca = nSca/1.1;
-}
-
-// rotation
-void Scene3D::rotate_up()
-{
-    xRot += 1.0;
-}
-
-void Scene3D::rotate_down()
-{
-    xRot -= 1.0;
-}
-
-void Scene3D::rotate_left()
-{
-    zRot += 1.0;
-}
-
-void Scene3D::rotate_right()
-{
-    zRot -= 1.0;
-}
-
-// translation
-void Scene3D::translate_down()
-{
-    zTra -= 0.05;
-}
-
-void Scene3D::translate_up()
-{
-    zTra += 0.05;
-}
-
-// reset to default
-void Scene3D::defaultScene()
-{
-    xRot=-90;
-    yRot=0;
-    zRot=0;
-    zTra=0;
-    nSca=1;
-}
-
-// Draw the axis
-void Scene3D::drawAxis() 
-{
-    // set the line width
-    glLineWidth(3.0f);
-    // set the mode to 'lines'
-    glBegin(GL_LINES);
-
-    // the X axis
-    glColor4f(1.00f, 0.00f, 0.00f, 1.0f);
-    glVertex3f(1.0f, 0.0f, 0.0f);
-    glVertex3f(-1.0f, 0.0f, 0.0f);
-    // the Y axis
-    glColor4f(0.00f, 1.00f, 0.00f, 1.0f);
-    glVertex3f(0.0f, 1.0f, 0.0f);
-    glVertex3f(0.0f, -1.0f, 0.0f);
-    // the Z axis
-    glColor4f(0.00f, 0.00f, 1.00f, 1.0f);
-    glVertex3f(0.0f, 0.0f, 1.0f);
-    glVertex3f(0.0f, 0.0f, -1.0f);
-
-    // end of the 'lines' mode
-    glEnd();
-}
-
-// Calculate the aspect ratio of given mesh
-void Scene3D::load()
-{
-    // initiate the ratio and center point
-    asp = 1;
-    cx = 0;
-    cy = 0;
-    cz = 0;
-
-    // if we have no vertices return
-    if (m_vertices.empty())
-        return;
 
     // initiate the total number of vertices of all parts
     m_color.resize(4 * m_vertices.size());
@@ -276,15 +296,19 @@ void Scene3D::load()
         m_color[4*i + 3] = 90;
     }
 
-    // define the middle point
-    cx = (mx + Mx) / 2;
-    cy = (my + My) / 2;
-    cz = (mz + Mz) / 2;
+    m_scaleDefault = 1;
 
-    // calculate the lowest ratio
-    if (Mx - mx <= DBL_EPSILON) asp = 1 / (Mx - mx);
-    if (My - my <= DBL_EPSILON) { if (1 / (My - my) < asp) asp = 1 / (My - my); }
-    if (Mz - mz <= DBL_EPSILON) { if (1 / (Mz - mz) < asp) asp = 1 / (Mz - mz); }
+    auto fixScale = [&](double val)
+    {
+        if (val > DBL_EPSILON && m_scaleDefault > 1/val)
+            m_scaleDefault = 1/val;
+    };
+
+    fixScale(Mx - mx);
+    fixScale(My - my);
+    fixScale(Mz - mz);
+
+    defaultScene();
 }
 
 void Scene3D::keyPressEvent(QKeyEvent *pe)
@@ -292,15 +316,19 @@ void Scene3D::keyPressEvent(QKeyEvent *pe)
     // set the actions of keyboard keys
     switch (pe->key())
     {
-    case Qt::Key_Plus: scale_plus(); break;
-    case Qt::Key_Equal: scale_plus(); break;
-    case Qt::Key_Minus: scale_minus(); break;
-    case Qt::Key_Up: rotate_up(); break;
-    case Qt::Key_Down: rotate_down(); break;
-    case Qt::Key_Left: rotate_left(); break;
-    case Qt::Key_Right: rotate_right(); break;
-    case Qt::Key_Z: translate_down(); break;
-    case Qt::Key_X: translate_up(); break;
+    case Qt::Key_Plus: scaleUp(); break;
+    case Qt::Key_Equal: scaleUp(); break;
+    case Qt::Key_Minus: scaleDown(); break;
+    case Qt::Key_W: rotateUpX(); break;
+    case Qt::Key_S: rotateDownX(); break;
+    case Qt::Key_A: rotateUpZ(); break;
+    case Qt::Key_D: rotateDownZ(); break;
+    case Qt::Key_Q: rotateUpY(); break;
+    case Qt::Key_E: rotateDownY(); break;
+    case Qt::Key_Up: translateUp(); break;
+    case Qt::Key_Down: translateDown(); break;
+    case Qt::Key_Left: translateLeft(); break;
+    case Qt::Key_Right: translateRight(); break;
     case Qt::Key_Space: defaultScene(); break;
     case Qt::Key_Escape: this->close(); break;
     }
@@ -310,6 +338,9 @@ void Scene3D::keyPressEvent(QKeyEvent *pe)
 // Draw the facets of mesh
 void Scene3D::drawFacets()
 {
+    if(!(m_showMask & shFacets))
+        return;
+
     // check do the mesh exist
     if (m_vertices.empty())
         return;
@@ -326,6 +357,9 @@ void Scene3D::drawFacets()
 // Draw the wireframe of mesh
 void Scene3D::drawWireframe()
 {
+    if(!(m_showMask & shWireframe))
+        return;
+
     // check do the mesh exist
     if (m_vertices.empty())
         return;
