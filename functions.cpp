@@ -1,18 +1,13 @@
 #include "common.h"
 #include "functions.h"
-#include <QCoreApplication>
 #include <QFile>
 #include <QFileInfo>
 #include <QDebug>
-#include <QVector>
 #include <QByteArray>
-#include <QDataStream>
 #include <QMessageBox>
 #include <boost/algorithm/string.hpp>
 #include <iostream>
 #include <fstream>
-#include <map>
-#include <vector>
 
 // define the type of STL file (ascii or binary)
 int getStlFileFormat(const QString &path)

@@ -1,11 +1,9 @@
 #include "scene3d.h"
 #include "functions.h"
 #include "mainWindow.h"
-#include <fstream>
-#include <vector>
+#include <QMouseEvent>
 #include <unordered_set>
-#include <QtGui>
-#include <QtWidgets>
+#include <fstream>
 #include <float.h>
 
 // Initiation of Scene3D object
@@ -372,5 +370,5 @@ void Scene3D::drawWireframe()
     // set the vertices
     glVertexPointer(3, GL_DOUBLE, 0, m_vertices.data());
     // set the edges
-    glDrawElements(GL_LINES, static_cast<GLsizei>(m_edges.size()), GL_UNSIGNED_INT, m_edges.data());
+    glDrawElements(GL_LINES, static_cast<GLsizei>(m_edges.size())*2, GL_UNSIGNED_INT, m_edges.data());
 }

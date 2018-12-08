@@ -2,8 +2,6 @@
 
 #include "common.h"
 #include <vector>
-#include <QtGui> 
-#include <QtWidgets>
 #include <QtOpenGL/QGLWidget>
 
 // Scene3D class to 3D objects visualization using Qt
