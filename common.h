@@ -7,6 +7,8 @@
 #define STL_BINARY 0
 #define STL_ASCII 1
 
+namespace common {
+
 // utility object (the vertex)
 struct Vertex {
     double x;
@@ -23,8 +25,13 @@ std::ostream& operator<<(std::ostream& out, const Vertex &p);
 
 struct Triangle
 {
-    Triangle(unsigned int _i1, unsigned int _i2, unsigned int _i3);
-    unsigned int i1;
-    unsigned int i2;
-    unsigned int i3;
+    Triangle(uint32_t i1, uint32_t i2, uint32_t i3);
+    uint32_t coord[3];
 };
+
+struct Edge
+{
+    Edge(unsigned int i1, unsigned int i2);
+    uint32_t coord[2];
+};
+}

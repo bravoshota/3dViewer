@@ -67,16 +67,16 @@ void MainWindow::openModel()
         // if type is binary
         if (type == STL_BINARY)
         {
-            std::vector<Vertex> vertices;
-            std::vector<Triangle> faces;
+            std::vector<common::Vertex> vertices;
+            std::vector<common::Triangle> faces;
             openStlBin(fileName.toLatin1().data(), vertices, faces);
             widget->setData(std::move(vertices), std::move(faces));
         }
         // if type is ascii
         else if (type == STL_ASCII)
         {
-            std::vector<Vertex> vertices;
-            std::vector<Triangle> faces;
+            std::vector<common::Vertex> vertices;
+            std::vector<common::Triangle> faces;
             openStlAsc(fileName.toLatin1().data(), vertices, faces);
             widget->setData(std::move(vertices), std::move(faces));
         }

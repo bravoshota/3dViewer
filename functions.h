@@ -5,5 +5,7 @@
 #include <vector>
 
 int getStlFileFormat(const QString &path);
-bool openStlBin(char *filename, std::vector<Vertex> &vertices, std::vector<Triangle> &faces);
-bool openStlAsc(char *filename, std::vector<Vertex> &vertices, std::vector<Triangle> &faces);
+bool openStlBin(char *filename, std::vector<common::Vertex> &vertices,
+                std::vector<common::Triangle> &faces);
+bool openStlAsc(char *filename, std::vector<common::Vertex> &vertices,
+                std::vector<common::Triangle> &faces);

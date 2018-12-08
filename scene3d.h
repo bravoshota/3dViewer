@@ -10,8 +10,9 @@
 class Scene3D : public QGLWidget
 {
 private:
-    std::vector<Vertex> m_vertices;
-    std::vector<Triangle> m_faces;
+    std::vector<common::Vertex> m_vertices;
+    std::vector<common::Triangle> m_faces;
+    std::vector<common::Edge> m_edges;
     std::vector<uint8_t> m_color;
 
     GLdouble xRot;				// the rotation angle of X axis
@@ -51,8 +52,9 @@ protected:
     void wheelEvent(QWheelEvent* pe) override;
 
 public:
-    Scene3D(QWidget *parent = 0);
-    void setData(std::vector<Vertex> &&vertices, std::vector<Triangle> &&faces);
+    Scene3D(QWidget *parent = nullptr);
+    void setData(std::vector<common::Vertex> &&vertices,
+                 std::vector<common::Triangle> &&faces);
     void load();
     void keyPressEvent(QKeyEvent* pe) override;
 

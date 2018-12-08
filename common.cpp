@@ -1,4 +1,5 @@
 #include "common.h"
+namespace common {
 
 Vertex::Vertex() : x(0), y(0), z(0)
 {
@@ -23,9 +24,17 @@ std::ostream& operator<<(std::ostream& out, const Vertex &p) {
     return out;
 }
 
-Triangle::Triangle(unsigned int _i1, unsigned int _i2, unsigned int _i3)
-    : i1(_i1)
-    , i2(_i2)
-    , i3(_i3)
+Triangle::Triangle(uint32_t i1, uint32_t i2, uint32_t i3)
 {
+    coord[0] = i1;
+    coord[1] = i2;
+    coord[2] = i3;
+}
+
+Edge::Edge(unsigned int i1, unsigned int i2)
+{
+    coord[0] = i1;
+    coord[1] = i2;
+}
+
 }

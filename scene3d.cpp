@@ -3,7 +3,8 @@
 #include "mainWindow.h"
 #include <fstream>
 #include <vector>
-#include <QtGui> 
+#include <unordered_set>
+#include <QtGui>
 #include <QtWidgets>
 #include <float.h>
 
@@ -35,8 +36,6 @@ void Scene3D::initializeGL()
     load();
     // to use the arrays of vertices for drawing
     glEnableClientState(GL_VERTEX_ARRAY);
-    // to use the arrays of colors for drawing
-    glEnableClientState(GL_COLOR_ARRAY);
     // to use to draw triangles
     glEnableClientState(GL_INDEX_ARRAY);
 }
@@ -121,10 +120,36 @@ void Scene3D::wheelEvent(QWheelEvent* pe)
 
 // The controls actions of the scene
 // zoom
-void Scene3D::setData(std::vector<Vertex> &&vertices, std::vector<Triangle> &&faces)
+void Scene3D::setData(std::vector<common::Vertex> &&vertices,
+                      std::vector<common::Triangle> &&faces)
 {
     std::swap(m_vertices, vertices);
     std::swap(m_faces, faces);
+
+    // calculate here wireframe
+    m_edges.reserve(faces.size());
+    std::unordered_set<uint64_t> pairs;
+    for (const common::Triangle &tri : m_faces)
+    {
+        for (int i = 0; i < 3; ++i)
+        {
+            uint32_t i1 = tri.coord[i];
+            uint32_t i2 = tri.coord[(i+1)%3];
+            uint64_t pair;
+            pair = i1;
+            pair = (pair << 32) + i2;
+            if (pairs.find(pair) != pairs.end())
+                continue;
+
+            pair = i2;
+            pair = (pair << 32) + i1;
+            if (pairs.find(pair) != pairs.end())
+                continue;
+
+            pairs.insert(pair);
+            m_edges.push_back({i1, i2});
+        }
+    }
 }
 
 void Scene3D::scale_plus()
@@ -230,7 +255,7 @@ void Scene3D::load()
     // loop over the parts
     for (size_t i = 0; i < m_vertices.size(); ++i)
     {
-        const Vertex &p = m_vertices[i];
+        const common::Vertex &p = m_vertices[i];
         // check and replace the maximum and minimum values of X, Y and Z
         if (mx > p.x)
             mx = p.x;
@@ -288,6 +313,8 @@ void Scene3D::drawFacets()
     // check do the mesh exist
     if (m_vertices.empty())
         return;
+    // to use the arrays of colors for drawing
+    glEnableClientState(GL_COLOR_ARRAY);
     // set the vertices
     glVertexPointer(3, GL_DOUBLE, 0, m_vertices.data());
     // set the colors
@@ -302,14 +329,14 @@ void Scene3D::drawWireframe()
     // check do the mesh exist
     if (m_vertices.empty())
         return;
-    /*
+    // to use the arrays of colors for drawing
+    glDisableClientState(GL_COLOR_ARRAY);
+    // draw black wireframe
+    glColor3ub(20, 20, 20);
     // set the line width
-    glLineWidth(2.0f);
+    glLineWidth(1.0f);
     // set the vertices
     glVertexPointer(3, GL_DOUBLE, 0, m_vertices.data());
-    // set the colors
-    glColorPointer(4, GL_BYTE, 0, EdgeColor);
     // set the edges
-    glDrawElements(GL_LINES, 6 * fmesh, GL_UNSIGNED_INT, EdgeIndex);
-    */
+    glDrawElements(GL_LINES, static_cast<GLsizei>(m_edges.size()), GL_UNSIGNED_INT, m_edges.data());
 }

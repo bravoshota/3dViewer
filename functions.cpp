@@ -103,7 +103,8 @@ int getStlFileFormat(const QString &path)
 }
 
 // open STL asci file format
-bool openStlAsc(char *filename, std::vector<Vertex> &vertices, std::vector<Triangle> &faces)
+bool openStlAsc(char *filename, std::vector<common::Vertex> &vertices,
+                std::vector<common::Triangle> &faces)
 {
     // input variables:
     // filename - the path of file to load
@@ -205,7 +206,8 @@ bool openStlAsc(char *filename, std::vector<Vertex> &vertices, std::vector<Trian
 }
 
 // convert binary STL to OFF
-bool openStlBin(char *filename, std::vector<Vertex> &vertices, std::vector<Triangle> &faces)
+bool openStlBin(char *filename, std::vector<common::Vertex> &vertices,
+                std::vector<common::Triangle> &faces)
 {
     // input variables:
     // filename - the path of file to load
