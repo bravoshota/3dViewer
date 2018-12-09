@@ -12,6 +12,8 @@ private:
     std::vector<common::Triangle> m_faces;
     std::vector<common::Edge> m_edges;
     std::vector<uint8_t> m_color;
+    std::vector<uint32_t> m_triangleEdges;
+    std::vector<std::vector<uint32_t>> m_edgeTriangles;
 
     GLdouble m_rotateX;				// the rotation angle of X axis
     GLdouble m_rotateY;				// the rotation angle of Y axis

@@ -2,7 +2,7 @@
 #include "functions.h"
 #include "mainWindow.h"
 #include <QMouseEvent>
-#include <unordered_set>
+#include <unordered_map>
 #include <fstream>
 #include <float.h>
 
@@ -234,10 +234,13 @@ void Scene3D::load()
     if (m_vertices.empty())
         return;
 
-    // calculate wireframe
+    // calculate wireframe and triangle-edge connector
     m_edges.clear();
+    m_triangleEdges.clear();
     m_edges.reserve(m_faces.size());
-    std::unordered_set<uint64_t> pairs;
+    m_triangleEdges.reserve(3*m_faces.size());
+
+    std::unordered_map<uint64_t, uint32_t> pairs;
     for (const common::Triangle &tri : m_faces)
     {
         for (int i = 0; i < 3; ++i)
@@ -247,17 +250,33 @@ void Scene3D::load()
             uint64_t pair;
             pair = i1;
             pair = (pair << 32) + i2;
-            if (pairs.find(pair) != pairs.end())
+            auto it = pairs.find(pair);
+            if (it != pairs.end())
+            {
+                m_triangleEdges.push_back(it->second);
                 continue;
+            }
 
             pair = i2;
             pair = (pair << 32) + i1;
             if (pairs.find(pair) != pairs.end())
+            {
+                m_triangleEdges.push_back(it->second);
                 continue;
+            }
 
-            pairs.insert(pair);
+            pairs[pair] = m_edges.size();
+            m_triangleEdges.push_back(m_edges.size());
             m_edges.push_back({i1, i2});
         }
+    }
+
+    // fill edge-triangle connector
+    m_edgeTriangles.clear();
+    m_edgeTriangles.resize(m_edges.size());
+    for (uint32_t i = 0; i < m_triangleEdges.size(); ++i)
+    {
+        m_edgeTriangles[m_triangleEdges[i]].push_back(i/3);
     }
 
     // initiate the total number of vertices of all parts
