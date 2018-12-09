@@ -4,9 +4,6 @@
 #include <QFileInfo>
 #include <QDebug>
 #include <QByteArray>
-#include <QMessageBox>
-#include <boost/algorithm/string.hpp>
-#include <iostream>
 #include <fstream>
 
 // define the type of STL file (ascii or binary)
@@ -109,7 +106,6 @@ bool openStlAsc(char *filename, std::vector<common::Vertex> &vertices,
     // define the maximum size of line to process
     const int buffsize = 100;
     char str[buffsize];
-    char tstr[buffsize];
 
     // read the first line
     obj.getline(str, buffsize);
@@ -117,17 +113,9 @@ bool openStlAsc(char *filename, std::vector<common::Vertex> &vertices,
     // loop over the lines of file
     while (obj.getline(str, buffsize))
     {
-        // count the leading spaces
-        int b = 0;
-        while (isspace(str[b])) b++;
-        // skip the leading spaces and convert all chars to lowercase
-        for (int tb = b; tb < buffsize; tb++) tstr[tb - b] = tolower(str[tb]);
-
-        // set the rest of chars to space
-        for (int tb = buffsize - b; tb < buffsize; tb++) tstr[tb] = ' ';
-
+        QString tstr = QString(str).trimmed().toLower();
         // check do we find the start of new facet
-        if (strncmp(tstr, "facet", 5) == 0)
+        if (tstr.left(5) == "facet")
         {
             // initiate the new facet
             unsigned int index[3];
@@ -139,38 +127,37 @@ bool openStlAsc(char *filename, std::vector<common::Vertex> &vertices,
             {
                 // read the line with vertex data
                 obj.getline(str, buffsize);
-
-                // count the leading spaces
-                int b = 0;
-                while (isspace(str[b])) b++;
-                // skip the leading spaces and convert all chars to lowercase
-                for (int tb = b; tb < buffsize; tb++) tstr[tb - b] = tolower(str[tb]);
-
-                // set the rest of chars to space
-                for (int tb = buffsize - b; tb < buffsize; tb++) tstr[tb] = ' ';
+                tstr = QString(str).trimmed().toLower();
 
                 // split the buffer by spaces
-                std::vector<std::string> entities;
-                boost::split(entities, tstr, boost::is_any_of(" "), boost::token_compress_on);
-                // convert coordinates into double numbers (skip the "vertex" which has zero index)
-                double x = stod(entities[1]);
-                double y = stod(entities[2]);
-                double z = stod(entities[3]);
+                QStringList entities = tstr.split(' ');
+                if (entities.size() != 4 || entities[0] != "vertex")
+                    return false;
+
+                bool ok[3];
+                double x = entities[1].toDouble(&ok[0]);
+                double y = entities[2].toDouble(&ok[1]);
+                double z = entities[3].toDouble(&ok[2]);
+                if (!ok[0] || !ok[1] || !ok[2])
+                    return false;
 
                 // initiate the checker of the vertex is already exist
                 bool found_close_point = false;
                 // loop over previous vertices
-                for (size_t k = 0; k < vertices.size(); k++) {
-
+                for (size_t k = 0; k < vertices.size(); k++)
+                {
                     // check does the distance by X axis lower than eps (little constant)
                     double dx = fabs(x - vertices[k].x);
-                    if (dx < 1E-5) {
+                    if (dx < 1E-5)
+                    {
                         // check does the distance by Y axis lower than eps (little constant)
                         double dy = fabs(y - vertices[k].y);
-                        if (dy < 1E-5) {
+                        if (dy < 1E-5)
+                        {
                             // check does the distance by Z axis lower than eps (little constant)
                             double dz = fabs(z - vertices[k].z);
-                            if (dz < 1E-5) {
+                            if (dz < 1E-5)
+                            {
                                 // the current vertex is close to existing one, set it into facet
                                 index[j] = k;
                                 found_close_point = true;
@@ -181,7 +168,8 @@ bool openStlAsc(char *filename, std::vector<common::Vertex> &vertices,
                 }
 
                 // the current vertex is not close to any existing
-                if (!found_close_point) {
+                if (!found_close_point)
+                {
                     // set the index of new vertex into facet
                     index[j] = vertices.size();
                     // add it to array

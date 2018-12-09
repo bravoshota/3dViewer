@@ -78,10 +78,16 @@ void MainWindow::openModel()
         // check the type of STL (ascii or binary)
         int type = getStlFileFormat(fileName);
         if (type == STL_BINARY) {
-            openStlBin(fileName.toLatin1().data(), vertices, faces);
+            if (!openStlBin(fileName.toLatin1().data(), vertices, faces)) {
+                QMessageBox::warning(nullptr, "ERROR!", "this STL file has incorrect format");
+                return;
+            }
         } else
         if (type == STL_ASCII) {
-            openStlAsc(fileName.toLatin1().data(), vertices, faces);
+            if (!openStlAsc(fileName.toLatin1().data(), vertices, faces)) {
+                QMessageBox::warning(nullptr, "ERROR!", "this STL file has incorrect format");
+                return;
+            }
         } else {
             QMessageBox msgBox;
             msgBox.setText("This file corrupt and cannot be loaded");
