@@ -9,19 +9,20 @@
 
 namespace common {
 
-// utility object (the vertex)
 struct Vertex {
     double x;
     double y;
     double z;
-    // initiate the point with coordinates
+
     Vertex();
     Vertex(double xp, double yp, double zp);
     Vertex(float *coords);
 };
-
-// output method of point
 std::ostream& operator<<(std::ostream& out, const Vertex &p);
+
+struct Vector : Vertex
+{
+};
 
 struct Triangle
 {

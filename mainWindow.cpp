@@ -97,7 +97,10 @@ void MainWindow::openModel()
             return;
         }
         widget->setData(std::move(vertices), std::move(faces));
-        widget->load();
+        if (!widget->load()) {
+            QMessageBox::warning(nullptr, "ERROR!", "this STL file is corrupt");
+            return;
+        }
     }
 
     // set it as central widget of window

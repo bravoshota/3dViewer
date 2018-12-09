@@ -5,6 +5,7 @@
 #include <QDebug>
 #include <QByteArray>
 #include <fstream>
+#include <float.h>
 
 // define the type of STL file (ascii or binary)
 int getStlFileFormat(const QString &path)
@@ -265,4 +266,35 @@ bool openStlBin(char *filename, std::vector<common::Vertex> &vertices,
     }
 
     return true;
+}
+
+bool normalize(common::Vector &nor)
+{
+    double magn = sqrt(nor.x*nor.x + nor.y*nor.y + nor.z*nor.z);
+    if (magn <= DBL_EPSILON)
+        return false;
+
+    nor.x /= magn;
+    nor.y /= magn;
+    nor.z /= magn;
+    return true;
+}
+
+bool calculateNormal(const common::Vertex &v1,
+                     const common::Vertex &v2,
+                     const common::Vertex &v3,
+                     common::Vector &nor)
+{
+    double xVect1 = v2.x - v1.x;
+    double yVect1 = v2.y - v1.y;
+    double zVect1 = v2.z - v1.z;
+    double xVect2 = v3.x - v1.x;
+    double yVect2 = v3.y - v1.y;
+    double zVect2 = v3.z - v1.z;
+
+    nor.x = yVect1*zVect2 - zVect1*yVect2;
+    nor.y = zVect1*xVect2 - xVect1*zVect2;
+    nor.z = xVect1*yVect2 - yVect1*xVect2;
+
+    return normalize(nor);
 }

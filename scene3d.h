@@ -10,6 +10,7 @@ class Scene3D : public QGLWidget
 private:
     std::vector<common::Vertex> m_vertices;
     std::vector<common::Triangle> m_faces;
+    std::vector<common::Vector> m_faceNormals;
     std::vector<common::Edge> m_edges;
     std::vector<uint8_t> m_color;
     std::vector<uint32_t> m_triangleEdges;
@@ -57,7 +58,7 @@ public:
     Scene3D(QWidget *parent = nullptr);
     void setData(std::vector<common::Vertex> &&vertices,
                  std::vector<common::Triangle> &&faces);
-    void load();
+    bool load();
     void keyPressEvent(QKeyEvent* pe) override;
 
     int m_showMask;

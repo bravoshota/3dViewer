@@ -228,11 +228,23 @@ void Scene3D::setData(std::vector<common::Vertex> &&vertices,
 }
 
 // Calculate the aspect ratio of given mesh
-void Scene3D::load()
+bool Scene3D::load()
 {
     // if we have no vertices return
-    if (m_vertices.empty())
-        return;
+    if (m_vertices.empty() || m_faces.empty())
+        return false;
+
+    // calculate normals
+    m_faceNormals.resize(m_faces.size());
+    for (uint32_t i = 0; i < m_faces.size(); ++i)
+    {
+        const uint32_t *indices = m_faces[i].coord;
+        if (!calculateNormal(m_vertices[indices[0]],
+                             m_vertices[indices[1]],
+                             m_vertices[indices[2]],
+                             m_faceNormals[i]))
+            return false;
+    }
 
     // calculate wireframe and triangle-edge connector
     m_edges.clear();
@@ -326,6 +338,8 @@ void Scene3D::load()
     fixScale(Mz - mz);
 
     defaultScene();
+
+    return true;
 }
 
 void Scene3D::keyPressEvent(QKeyEvent *pe)
