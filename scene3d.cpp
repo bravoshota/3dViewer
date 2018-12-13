@@ -1,6 +1,7 @@
 #include "scene3d.h"
 #include "functions.h"
 #include "mainWindow.h"
+#include <QDebug>
 #include <QMouseEvent>
 #include <unordered_map>
 #include <fstream>
@@ -291,6 +292,9 @@ bool Scene3D::load()
         m_edgeTriangles[m_triangleEdges[i]].push_back(i/3);
     }
 
+    // it's time to fix triangle normals' orientations
+    fixTrianglesOrientation();
+
     // initiate the total number of vertices of all parts
     m_color.resize(4 * m_vertices.size());
 
@@ -366,25 +370,6 @@ void Scene3D::keyPressEvent(QKeyEvent *pe)
     updateGL();
 }
 
-// Draw the facets of mesh
-void Scene3D::drawFacets()
-{
-    if(!(m_showMask & shFacets))
-        return;
-
-    // check do the mesh exist
-    if (m_vertices.empty())
-        return;
-    // to use the arrays of colors for drawing
-    glEnableClientState(GL_COLOR_ARRAY);
-    // set the vertices
-    glVertexPointer(3, GL_DOUBLE, 0, m_vertices.data());
-    // set the colors
-    glColorPointer(4, GL_UNSIGNED_BYTE, 0, m_color.data());
-    // set the facets
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(3*m_faces.size()), GL_UNSIGNED_INT, m_faces.data());
-}
-
 // Draw the wireframe of mesh
 void Scene3D::drawWireframe()
 {
@@ -404,4 +389,107 @@ void Scene3D::drawWireframe()
     glVertexPointer(3, GL_DOUBLE, 0, m_vertices.data());
     // set the edges
     glDrawElements(GL_LINES, static_cast<GLsizei>(m_edges.size())*2, GL_UNSIGNED_INT, m_edges.data());
+}
+
+// Draw the facets of mesh
+void Scene3D::drawFacets()
+{
+    if(!(m_showMask & shFacets))
+        return;
+
+    // check do the mesh exist
+    if (m_vertices.empty())
+        return;
+    // to use the arrays of colors for drawing
+    glEnableClientState(GL_COLOR_ARRAY);
+    // set the vertices
+    glVertexPointer(3, GL_DOUBLE, 0, m_vertices.data());
+    // set the colors
+    glColorPointer(4, GL_UNSIGNED_BYTE, 0, m_color.data());
+    // set the facets
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(3*m_faces.size()), GL_UNSIGNED_INT, m_faces.data());
+}
+
+bool Scene3D::fixTrianglesOrientation(const common::Triangle &tria1, common::Triangle &tria2,
+                                      const common::Edge &edge) const
+{
+    bool cw1 = 0;
+    for (uint8_t i = 0; i < 3; ++i)
+    {
+        if (tria1.coord[i] == edge.coord[0])
+        {
+            cw1 = (tria1.coord[(i+1)%3] == edge.coord[1]);
+            break;
+        }
+    }
+
+    for (uint8_t i = 0; i < 3; ++i)
+    {
+        if (tria2.coord[i] == edge.coord[0])
+        {
+            bool cw2 = (tria2.coord[(i+1)%3] == edge.coord[1]);
+
+            if (cw1 == cw2)
+            {
+                if (i == 0)
+                {
+                    tria2.coord[0] = tria2.coord[1];
+                    tria2.coord[1] = edge.coord[0];
+                }
+                else if (i == 1)
+                {
+                    tria2.coord[1] = tria2.coord[2];
+                    tria2.coord[2] = edge.coord[0];
+                }
+                else
+                {
+                    tria2.coord[2] = tria2.coord[0];
+                    tria2.coord[0] = edge.coord[0];
+                }
+                return true;
+            }
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// start with first triangle as a pattern and set all other triangle orientations to it
+void Scene3D::fixTrianglesOrientation()
+{
+    if (m_faces.empty())
+        return;
+
+    uint32_t fixedNumber = 0;
+    std::unordered_set<uint32_t> visited;
+    std::vector<uint32_t> triangles;
+    triangles.reserve(m_faces.size());
+    triangles.push_back(0);
+    for (uint32_t i = 0; i < triangles.size(); ++i)
+    {
+        uint32_t iTri = triangles[i];
+        const common::Triangle &tria = m_faces[iTri];
+        std::vector<uint32_t> neighbors;
+
+        const uint32_t *edges = &m_triangleEdges[3*iTri];
+        for (uint8_t j = 0; j < 3; ++j)
+        {
+            uint32_t iEdge = edges[j];
+            const std::vector<uint32_t> &neighbors = m_edgeTriangles[iEdge];
+            for (uint32_t k = 0; k < neighbors.size(); ++k)
+            {
+                uint32_t iNeighbor = neighbors[k];
+                if (iNeighbor == iTri || visited.find(iNeighbor) != visited.end())
+                    continue;
+                if (fixTrianglesOrientation(tria, m_faces[neighbors[k]], m_edges[iEdge]))
+                    ++fixedNumber;
+                triangles.push_back(iNeighbor);
+                visited.insert(iNeighbor);
+            }
+        }
+    }
+
+    if (fixedNumber > 0)
+        qDebug() << fixedNumber << " triangle orientations were fixed";
 }

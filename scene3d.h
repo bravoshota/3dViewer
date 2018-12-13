@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include <vector>
+#include <unordered_set>
 #include <QtOpenGL/QGLWidget>
 
 // Scene3D class to 3D objects visualization using Qt
@@ -44,6 +45,10 @@ private:
 	void drawAxis();
     void drawWireframe();
     void drawFacets();
+
+    bool fixTrianglesOrientation(const common::Triangle &tria1, common::Triangle &tria2,
+                                 const common::Edge &edge) const;
+    void fixTrianglesOrientation();
 
 protected:
     void initializeGL() override;
