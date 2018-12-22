@@ -10,12 +10,14 @@ class Scene3D : public QGLWidget
 {
 private:
     std::vector<common::Vertex> m_vertices;
-    std::vector<common::Triangle> m_faces;
-    std::vector<common::Vector> m_faceNormals;
+    std::vector<common::Triangle> m_triangles;
+    std::vector<common::Vector> m_TriangleNormals;
     std::vector<common::Edge> m_edges;
     std::vector<uint8_t> m_color;
     std::vector<uint32_t> m_triangleEdges;
     std::vector<std::vector<uint32_t>> m_edgeTriangles;
+    std::vector<uint32_t> m_triangleFaces;
+    std::vector<std::vector<uint32_t>> m_faces;
 
     GLdouble m_rotateX;				// the rotation angle of X axis
     GLdouble m_rotateY;				// the rotation angle of Y axis
@@ -64,6 +66,7 @@ public:
     void setData(std::vector<common::Vertex> &&vertices,
                  std::vector<common::Triangle> &&faces);
     bool load();
+    bool startPoligonization(double angleInRadians);
     void keyPressEvent(QKeyEvent* pe) override;
 
     int m_showMask;

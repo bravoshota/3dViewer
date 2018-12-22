@@ -22,6 +22,8 @@ std::ostream& operator<<(std::ostream& out, const Vertex &p);
 
 struct Vector : Vertex
 {
+    // dot product
+    double operator*(const Vector &other) const;
 };
 
 struct Triangle

@@ -23,7 +23,7 @@ public:
 
 private slots:
 	void openModel();
-    void setFigureOn();
 	void setDockOptions();
+    void startPoligonization();
     void keyPressEvent(QKeyEvent* pe);
 };

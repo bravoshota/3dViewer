@@ -225,36 +225,38 @@ void Scene3D::setData(std::vector<common::Vertex> &&vertices,
                       std::vector<common::Triangle> &&faces)
 {
     std::swap(m_vertices, vertices);
-    std::swap(m_faces, faces);
+    std::swap(m_triangles, faces);
+    m_triangleFaces.clear();
+    m_faces.clear();
 }
 
 // Calculate the aspect ratio of given mesh
 bool Scene3D::load()
 {
     // if we have no vertices return
-    if (m_vertices.empty() || m_faces.empty())
+    if (m_vertices.empty() || m_triangles.empty())
         return false;
 
     // calculate normals
-    m_faceNormals.resize(m_faces.size());
-    for (uint32_t i = 0; i < m_faces.size(); ++i)
+    m_TriangleNormals.resize(m_triangles.size());
+    for (uint32_t i = 0; i < m_triangles.size(); ++i)
     {
-        const uint32_t *indices = m_faces[i].coord;
+        const uint32_t *indices = m_triangles[i].coord;
         if (!calculateNormal(m_vertices[indices[0]],
                              m_vertices[indices[1]],
                              m_vertices[indices[2]],
-                             m_faceNormals[i]))
+                             m_TriangleNormals[i]))
             return false;
     }
 
     // calculate wireframe and triangle-edge connector
     m_edges.clear();
     m_triangleEdges.clear();
-    m_edges.reserve(m_faces.size());
-    m_triangleEdges.reserve(3*m_faces.size());
+    m_edges.reserve(m_triangles.size());
+    m_triangleEdges.reserve(3*m_triangles.size());
 
     std::unordered_map<uint64_t, uint32_t> pairs;
-    for (const common::Triangle &tri : m_faces)
+    for (const common::Triangle &tri : m_triangles)
     {
         for (int i = 0; i < 3; ++i)
         {
@@ -272,7 +274,8 @@ bool Scene3D::load()
 
             pair = i2;
             pair = (pair << 32) + i1;
-            if (pairs.find(pair) != pairs.end())
+            it = pairs.find(pair);
+            if (it != pairs.end())
             {
                 m_triangleEdges.push_back(it->second);
                 continue;
@@ -346,6 +349,53 @@ bool Scene3D::load()
     return true;
 }
 
+bool Scene3D::startPoligonization(double angleInRadians)
+{
+    if (m_triangles.empty())
+        return false;
+
+    m_triangleFaces.resize(m_triangles.size());
+
+    std::unordered_set<uint32_t> visited;
+    for (uint32_t iStartTri = 0; iStartTri < m_triangles.size(); ++iStartTri)
+    {
+        if (visited.find(iStartTri) != visited.end())
+            continue;
+
+        std::vector<uint32_t> singleFace;
+        singleFace.push_back(iStartTri);
+        visited.insert(iStartTri);
+        m_triangleFaces[iStartTri] = m_faces.size();
+        for (uint32_t i = 0; i < singleFace.size(); ++i)
+        {
+            uint32_t iTri = singleFace[i];
+            const common::Vector &normal = m_TriangleNormals[iTri];
+            uint32_t*edges = &m_triangleEdges[3*iTri];
+            for (uint32_t j = 0; j < 3; ++j)
+            {
+                uint32_t iEdge = edges[j];
+                const std::vector<uint32_t> &edgeTriangles = m_edgeTriangles[iEdge];
+                for (uint32_t iNeigh : edgeTriangles)
+                {
+                    if (iNeigh == iTri)
+                        continue;
+                    if (visited.find(iNeigh) != visited.end())
+                        continue;
+                    const common::Vector &neighNormal = m_TriangleNormals[iNeigh];
+                    if (normal * neighNormal < angleInRadians)
+                        continue;
+                    singleFace.push_back(iNeigh);
+                    visited.insert(iNeigh);
+                    m_triangleFaces[iNeigh] = m_faces.size();
+                }
+            }
+        }
+        m_faces.push_back(std::move(singleFace));
+    }
+
+    return true;
+}
+
 void Scene3D::keyPressEvent(QKeyEvent *pe)
 {
     // set the actions of keyboard keys
@@ -407,7 +457,7 @@ void Scene3D::drawFacets()
     // set the colors
     glColorPointer(4, GL_UNSIGNED_BYTE, 0, m_color.data());
     // set the facets
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(3*m_faces.size()), GL_UNSIGNED_INT, m_faces.data());
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(3*m_triangles.size()), GL_UNSIGNED_INT, m_triangles.data());
 }
 
 bool Scene3D::fixTrianglesOrientation(const common::Triangle &tria1, common::Triangle &tria2,
@@ -458,18 +508,18 @@ bool Scene3D::fixTrianglesOrientation(const common::Triangle &tria1, common::Tri
 // start with first triangle as a pattern and set all other triangle orientations to it
 void Scene3D::fixTrianglesOrientation()
 {
-    if (m_faces.empty())
+    if (m_triangles.empty())
         return;
 
     uint32_t fixedNumber = 0;
     std::unordered_set<uint32_t> visited;
     std::vector<uint32_t> triangles;
-    triangles.reserve(m_faces.size());
+    triangles.reserve(m_triangles.size());
     triangles.push_back(0);
     for (uint32_t i = 0; i < triangles.size(); ++i)
     {
         uint32_t iTri = triangles[i];
-        const common::Triangle &tria = m_faces[iTri];
+        const common::Triangle &tria = m_triangles[iTri];
         std::vector<uint32_t> neighbors;
 
         const uint32_t *edges = &m_triangleEdges[3*iTri];
@@ -482,7 +532,7 @@ void Scene3D::fixTrianglesOrientation()
                 uint32_t iNeighbor = neighbors[k];
                 if (iNeighbor == iTri || visited.find(iNeighbor) != visited.end())
                     continue;
-                if (fixTrianglesOrientation(tria, m_faces[neighbors[k]], m_edges[iEdge]))
+                if (fixTrianglesOrientation(tria, m_triangles[neighbors[k]], m_edges[iEdge]))
                     ++fixedNumber;
                 triangles.push_back(iNeighbor);
                 visited.insert(iNeighbor);

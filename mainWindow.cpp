@@ -23,7 +23,11 @@ MainWindow::MainWindow()
     menu->addAction(tr("&Quit"), this, &QWidget::close);
 
     // create the 'Process' menu which will provide the start of different calculations
-    //menuActions = menuBar()->addMenu(tr("&Process"));
+    menuActions = menuBar()->addMenu(tr("&Process"));
+    // start poligonization
+    action = menuActions->addAction(tr("Start Poligonization"), this,
+                                    &MainWindow::startPoligonization);
+    action->setEnabled(false);
 
     // create widget (Scene3D object) to show the 3D-objects
     widget = new Scene3D(this);
@@ -94,33 +98,28 @@ void MainWindow::openModel()
             msgBox.setInformativeText("STL Load");
             msgBox.setStandardButtons(QMessageBox::Ok);
             msgBox.exec();
+            menuActions->actions()[0]->setEnabled(false);
             return;
         }
         widget->setData(std::move(vertices), std::move(faces));
         if (!widget->load()) {
+            menuActions->actions()[0]->setEnabled(false);
             QMessageBox::warning(nullptr, "ERROR!", "this STL file is corrupt");
             return;
         }
     }
 
-    // set it as central widget of window
-    setFigureOn();
-}
+    menuActions->actions()[0]->setEnabled(true);
 
-// Set the initial statement of menu items
-void MainWindow::setFigureOn()
-{
-    // use the 'Elements' menu
-    QList<QAction*> actions = menuOptions->actions();
     // enable and set on 'Axis' checker
-    actions.at(0)->setChecked(true);
-    actions.at(0)->setEnabled(true);
+    menuOptions->actions()[0]->setChecked(true);
+    menuOptions->actions()[0]->setEnabled(true);
     // enable and set on 'Wireframe' checker
-    actions.at(1)->setChecked(true);
-    actions.at(1)->setEnabled(true);
+    menuOptions->actions()[1]->setChecked(true);
+    menuOptions->actions()[1]->setEnabled(true);
     // enable and set on 'Facets' checker
-    actions.at(2)->setChecked(true);
-    actions.at(2)->setEnabled(true);
+    menuOptions->actions()[2]->setChecked(true);
+    menuOptions->actions()[2]->setEnabled(true);
 
     // refresh the 'elements visibility' variable
     setDockOptions();
@@ -146,6 +145,11 @@ void MainWindow::setDockOptions()
 
     // update the showed elements
     widget->update();
+}
+
+void MainWindow::startPoligonization()
+{
+    widget->startPoligonization(0.9);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *pe)

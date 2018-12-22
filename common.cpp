@@ -24,6 +24,12 @@ std::ostream& operator<<(std::ostream& out, const Vertex &p) {
     return out;
 }
 
+// dot product
+double Vector::operator*(const Vector &other) const
+{
+    return x*other.x + y*other.y + z*other.z;
+}
+
 Triangle::Triangle(uint32_t i1, uint32_t i2, uint32_t i3)
 {
     coord[0] = i1;
