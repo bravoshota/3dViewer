@@ -5,6 +5,11 @@
 #include <unordered_set>
 #include <QtOpenGL/QGLWidget>
 
+// The masks of 'elements visibility' variable
+#define shAxis      0x01
+#define shWireframe 0x02
+#define shTriangles 0x04
+
 // Scene3D class to 3D objects visualization using Qt
 class Scene3D : public QGLWidget
 {
@@ -13,11 +18,13 @@ private:
     std::vector<common::Triangle> m_triangles;
     std::vector<common::Vector> m_TriangleNormals;
     std::vector<common::Edge> m_edges;
-    std::vector<uint8_t> m_color;
     std::vector<uint32_t> m_triangleEdges;
     std::vector<std::vector<uint32_t>> m_edgeTriangles;
     std::vector<uint32_t> m_triangleFaces;
     std::vector<std::vector<uint32_t>> m_faces;
+    std::vector<common::Vertex> m_drawVertices;
+    std::vector<common::Triangle> m_drawTriangles;
+    std::vector<uint8_t> m_drawColor;
 
     GLdouble m_rotateX;				// the rotation angle of X axis
     GLdouble m_rotateY;				// the rotation angle of Y axis
@@ -46,7 +53,7 @@ private:
 
 	void drawAxis();
     void drawWireframe();
-    void drawFacets();
+    void drawTriangles();
 
     bool fixTrianglesOrientation(const common::Triangle &tria1, common::Triangle &tria2,
                                  const common::Edge &edge) const;
@@ -60,13 +67,14 @@ protected:
     void mouseMoveEvent(QMouseEvent* pe) override;
     void mouseReleaseEvent(QMouseEvent* pe) override;
     void wheelEvent(QWheelEvent* pe) override;
+    void updateForDraw();
 
 public:
     Scene3D(QWidget *parent = nullptr);
     void setData(std::vector<common::Vertex> &&vertices,
                  std::vector<common::Triangle> &&faces);
     bool load();
-    bool startPoligonization(double angleInRadians);
+    bool poligonize(double angleInRadians = 0.9);
     void keyPressEvent(QKeyEvent* pe) override;
 
     int m_showMask;

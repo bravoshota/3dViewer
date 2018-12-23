@@ -1,6 +1,5 @@
 #include "scene3d.h"
 #include "functions.h"
-#include "mainWindow.h"
 #include <QDebug>
 #include <QMouseEvent>
 #include <unordered_map>
@@ -27,8 +26,6 @@ void Scene3D::initializeGL()
     glEnable(GL_BLEND);
     // enable the transparency
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    // calculate the aspect ratio
-    load();
     // to use the arrays of vertices for drawing
     glEnableClientState(GL_VERTEX_ARRAY);
     // to use to draw triangles
@@ -73,7 +70,7 @@ void Scene3D::paintGL()
     // draw the elements using the 'elements visibility' variable
     drawAxis();
     drawWireframe();
-    drawFacets();
+    drawTriangles();
 }
 
 // Set the initial position of actions doing by mouse
@@ -112,6 +109,57 @@ void Scene3D::wheelEvent(QWheelEvent* pe)
 
     // draw the scene
     updateGL();
+}
+
+void Scene3D::updateForDraw()
+{
+    const uint8_t A = 255;
+
+    m_drawColor.clear();
+    m_drawVertices.clear();
+    m_drawTriangles.clear();
+
+    if (m_faces.empty())
+    {
+        // initiate the total number of vertices of all parts
+        m_drawColor.resize(4 * m_vertices.size());
+
+        // loop over the parts
+        for (size_t i = 0; i < m_vertices.size(); ++i)
+        {
+            m_drawColor[4*i + 0] = 50;
+            m_drawColor[4*i + 1] = 170;
+            m_drawColor[4*i + 2] = 128;
+            m_drawColor[4*i + 3] = A;
+        }
+    }
+    else
+    {
+        m_drawColor.reserve(12 * m_triangles.size());
+        m_drawVertices.reserve(3 * m_triangles.size());
+        m_drawTriangles.reserve(m_triangles.size());
+        for (const auto &faceTriangles : m_faces)
+        {
+            auto R = static_cast<uint8_t>(std::rand()*256/RAND_MAX);
+            auto G = static_cast<uint8_t>(std::rand()*256/RAND_MAX);
+            auto B = static_cast<uint8_t>(std::rand()*256/RAND_MAX);
+            for (uint32_t iTri : faceTriangles)
+            {
+                uint32_t index = m_drawVertices.size();
+                m_drawTriangles.push_back({index, index + 1, index + 2});
+
+                const common::Triangle &tri = m_triangles[iTri];
+                for (uint8_t i = 0; i < 3; ++i)
+                {
+                    m_drawVertices.push_back(m_vertices[tri.coord[i]]);
+                    m_drawColor.push_back(R);
+                    m_drawColor.push_back(G);
+                    m_drawColor.push_back(B);
+                    m_drawColor.push_back(A);
+                }
+            }
+        }
+    }
 }
 
 void Scene3D::scaleUp()
@@ -228,6 +276,9 @@ void Scene3D::setData(std::vector<common::Vertex> &&vertices,
     std::swap(m_triangles, faces);
     m_triangleFaces.clear();
     m_faces.clear();
+    m_drawVertices.clear();
+    m_drawTriangles.clear();
+    m_drawColor.clear();
 }
 
 // Calculate the aspect ratio of given mesh
@@ -298,9 +349,6 @@ bool Scene3D::load()
     // it's time to fix triangle normals' orientations
     fixTrianglesOrientation();
 
-    // initiate the total number of vertices of all parts
-    m_color.resize(4 * m_vertices.size());
-
     // initiate the maximum and minimum values of X, Y and Z
     double mx = DBL_MAX;
     double my = DBL_MAX;
@@ -325,11 +373,6 @@ bool Scene3D::load()
             mz = p.z;
         if (Mz < p.z)
             Mz = p.z;
-
-        m_color[4*i + 0] = 50;
-        m_color[4*i + 1] = 170;
-        m_color[4*i + 2] = 128;
-        m_color[4*i + 3] = 90;
     }
 
     m_scaleDefault = 1;
@@ -345,15 +388,17 @@ bool Scene3D::load()
     fixScale(Mz - mz);
 
     defaultScene();
+    updateForDraw();
 
     return true;
 }
 
-bool Scene3D::startPoligonization(double angleInRadians)
+bool Scene3D::poligonize(double angleInRadians)
 {
     if (m_triangles.empty())
         return false;
 
+    m_faces.clear();
     m_triangleFaces.resize(m_triangles.size());
 
     std::unordered_set<uint32_t> visited;
@@ -393,6 +438,9 @@ bool Scene3D::startPoligonization(double angleInRadians)
         m_faces.push_back(std::move(singleFace));
     }
 
+    updateForDraw();
+    updateGL();
+
     return true;
 }
 
@@ -401,21 +449,22 @@ void Scene3D::keyPressEvent(QKeyEvent *pe)
     // set the actions of keyboard keys
     switch (pe->key())
     {
-    case Qt::Key_Plus: scaleUp(); break;
-    case Qt::Key_Equal: scaleUp(); break;
-    case Qt::Key_Minus: scaleDown(); break;
-    case Qt::Key_W: rotateUpX(); break;
-    case Qt::Key_S: rotateDownX(); break;
-    case Qt::Key_A: rotateUpZ(); break;
-    case Qt::Key_D: rotateDownZ(); break;
-    case Qt::Key_Q: rotateUpY(); break;
-    case Qt::Key_E: rotateDownY(); break;
-    case Qt::Key_Up: translateUp(); break;
-    case Qt::Key_Down: translateDown(); break;
-    case Qt::Key_Left: translateLeft(); break;
+    case Qt::Key_Plus:  scaleUp();        break;
+    case Qt::Key_Equal: scaleUp();        break;
+    case Qt::Key_Minus: scaleDown();      break;
+    case Qt::Key_W:     rotateDownX();    break;
+    case Qt::Key_S:     rotateUpX();      break;
+    case Qt::Key_A:     rotateUpZ();      break;
+    case Qt::Key_D:     rotateDownZ();    break;
+    case Qt::Key_Q:     rotateUpY();      break;
+    case Qt::Key_E:     rotateDownY();    break;
+    case Qt::Key_P:     poligonize();     break;
+    case Qt::Key_Up:    translateUp();    break;
+    case Qt::Key_Down:  translateDown();  break;
+    case Qt::Key_Left:  translateLeft();  break;
     case Qt::Key_Right: translateRight(); break;
-    case Qt::Key_Space: defaultScene(); break;
-    case Qt::Key_Escape: this->close(); break;
+    case Qt::Key_Space: defaultScene();   break;
+    case Qt::Key_Escape:this->close();    break;
     }
     updateGL();
 }
@@ -442,22 +491,37 @@ void Scene3D::drawWireframe()
 }
 
 // Draw the facets of mesh
-void Scene3D::drawFacets()
+void Scene3D::drawTriangles()
 {
-    if(!(m_showMask & shFacets))
+    if(!(m_showMask & shTriangles))
         return;
 
     // check do the mesh exist
     if (m_vertices.empty())
         return;
+
+    const common::Vertex *vert;
+    const common::Triangle *tria;
+    if (m_drawVertices.empty())
+    {
+        vert = m_vertices.data();
+        tria = m_triangles.data();
+    }
+    else
+    {
+        vert = m_drawVertices.data();
+        tria = m_drawTriangles.data();
+    }
+
     // to use the arrays of colors for drawing
     glEnableClientState(GL_COLOR_ARRAY);
     // set the vertices
-    glVertexPointer(3, GL_DOUBLE, 0, m_vertices.data());
+    glVertexPointer(3, GL_DOUBLE, 0, vert);
     // set the colors
-    glColorPointer(4, GL_UNSIGNED_BYTE, 0, m_color.data());
+    glColorPointer(4, GL_UNSIGNED_BYTE, 0, m_drawColor.data());
     // set the facets
-    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(3*m_triangles.size()), GL_UNSIGNED_INT, m_triangles.data());
+    glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(3*m_triangles.size()),
+                   GL_UNSIGNED_INT, tria);
 }
 
 bool Scene3D::fixTrianglesOrientation(const common::Triangle &tria1, common::Triangle &tria2,

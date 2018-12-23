@@ -3,11 +3,6 @@
 #include <QMainWindow>
 #include <QDir>
 
-// The masks of 'elements visibility' variable 
-#define shAxis      0x01
-#define shWireframe 0x02
-#define shFacets    0x04
-
 class Scene3D;
 
 class MainWindow : public QMainWindow
@@ -24,6 +19,6 @@ public:
 private slots:
 	void openModel();
 	void setDockOptions();
-    void startPoligonization();
+    void poligonize();
     void keyPressEvent(QKeyEvent* pe);
 };

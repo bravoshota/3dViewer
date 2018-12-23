@@ -25,8 +25,7 @@ MainWindow::MainWindow()
     // create the 'Process' menu which will provide the start of different calculations
     menuActions = menuBar()->addMenu(tr("&Process"));
     // start poligonization
-    action = menuActions->addAction(tr("Start Poligonization"), this,
-                                    &MainWindow::startPoligonization);
+    action = menuActions->addAction(tr("Poligonize"), this, &MainWindow::poligonize);
     action->setEnabled(false);
 
     // create widget (Scene3D object) to show the 3D-objects
@@ -47,8 +46,8 @@ MainWindow::MainWindow()
     action->setChecked(false);
     action->setEnabled(false);
     connect(action, &QAction::toggled, this, &MainWindow::setDockOptions);
-    // create the checker for solid's facets
-    action = menuOptions->addAction(tr("Facets"));
+    // create the checker for solid's triangles
+    action = menuOptions->addAction(tr("Triangles"));
     action->setCheckable(true);
     action->setChecked(false);
     action->setEnabled(false);
@@ -117,7 +116,7 @@ void MainWindow::openModel()
     // enable and set on 'Wireframe' checker
     menuOptions->actions()[1]->setChecked(true);
     menuOptions->actions()[1]->setEnabled(true);
-    // enable and set on 'Facets' checker
+    // enable and set on 'Triangles' checker
     menuOptions->actions()[2]->setChecked(true);
     menuOptions->actions()[2]->setEnabled(true);
 
@@ -134,22 +133,22 @@ void MainWindow::setDockOptions()
     widget->m_showMask = 0;
 
     // set the mask of 'Axis' item
-    if (actions.at(0)->isChecked())
+    if (actions[0]->isChecked())
         widget->m_showMask |= shAxis;
     // set the mask of 'Wireframe' item
-    if (actions.at(1)->isChecked())
+    if (actions[1]->isChecked())
         widget->m_showMask |= shWireframe;
-    // set the mask of 'Facets' item
-    if (actions.at(2)->isChecked())
-        widget->m_showMask |= shFacets;
+    // set the mask of 'Triangles' item
+    if (actions[2]->isChecked())
+        widget->m_showMask |= shTriangles;
 
     // update the showed elements
     widget->update();
 }
 
-void MainWindow::startPoligonization()
+void MainWindow::poligonize()
 {
-    widget->startPoligonization(0.9);
+    widget->poligonize();
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *pe)
