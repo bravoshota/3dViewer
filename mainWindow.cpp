@@ -52,6 +52,12 @@ MainWindow::MainWindow()
     action->setChecked(false);
     action->setEnabled(false);
     connect(action, &QAction::toggled, this, &MainWindow::setDockOptions);
+    // create the checker for triangles' normals
+    action = menuOptions->addAction(tr("Normals"));
+    action->setCheckable(true);
+    action->setChecked(false);
+    action->setEnabled(false);
+    connect(action, &QAction::toggled, this, &MainWindow::setDockOptions);
 
     m_lastOpenedDir = QDir::currentPath();
 }
@@ -119,6 +125,9 @@ void MainWindow::openModel()
     // enable and set on 'Triangles' checker
     menuOptions->actions()[2]->setChecked(true);
     menuOptions->actions()[2]->setEnabled(true);
+    // enable and set on 'Normals' checker
+    menuOptions->actions()[3]->setChecked(false);
+    menuOptions->actions()[3]->setEnabled(true);
 
     // refresh the 'elements visibility' variable
     setDockOptions();
@@ -141,6 +150,9 @@ void MainWindow::setDockOptions()
     // set the mask of 'Triangles' item
     if (actions[2]->isChecked())
         widget->m_showMask |= shTriangles;
+    // set the mask of 'Normals' item
+    if (actions[3]->isChecked())
+        widget->m_showMask |= shNormals;
 
     // update the showed elements
     widget->update();

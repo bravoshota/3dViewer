@@ -9,22 +9,27 @@
 #define shAxis      0x01
 #define shWireframe 0x02
 #define shTriangles 0x04
+#define shNormals   0x08
 
 // Scene3D class to 3D objects visualization using Qt
 class Scene3D : public QGLWidget
 {
 private:
-    std::vector<common::Vertex> m_vertices;
-    std::vector<common::Triangle> m_triangles;
-    std::vector<common::Vector> m_TriangleNormals;
-    std::vector<common::Edge> m_edges;
-    std::vector<uint32_t> m_triangleEdges;
+    // general data
+    std::vector<common::Vertex>        m_vertices;
+    std::vector<common::Triangle>      m_triangles;
+    std::vector<common::Vector>        m_normals;
+    std::vector<common::Vertex>        m_normalVertices;
+    std::vector<uint32_t>              m_normalIndices;
+    std::vector<common::Edge>          m_edges;
+    std::vector<uint32_t>              m_triangleEdges;
     std::vector<std::vector<uint32_t>> m_edgeTriangles;
-    std::vector<uint32_t> m_triangleFaces;
+    std::vector<uint32_t>              m_triangleFaces;
     std::vector<std::vector<uint32_t>> m_faces;
-    std::vector<common::Vertex> m_drawVertices;
+    // drawing helpers
+    std::vector<common::Vertex>   m_drawVertices;
     std::vector<common::Triangle> m_drawTriangles;
-    std::vector<uint8_t> m_drawColor;
+    std::vector<uint8_t>          m_drawColor;
 
     GLdouble m_rotateX;				// the rotation angle of X axis
     GLdouble m_rotateY;				// the rotation angle of Y axis
@@ -54,6 +59,7 @@ private:
 	void drawAxis();
     void drawWireframe();
     void drawTriangles();
+    void drawNormals();
 
     bool fixTrianglesOrientation(const common::Triangle &tria1, common::Triangle &tria2,
                                  const common::Edge &edge) const;

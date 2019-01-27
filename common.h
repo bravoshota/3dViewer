@@ -17,13 +17,27 @@ struct Vertex {
     Vertex();
     Vertex(double xp, double yp, double zp);
     Vertex(float *coords);
+
+    Vertex operator + (const Vertex &other) const;
+    Vertex operator * (double val) const;
+    Vertex operator / (double val) const;
+    Vertex &operator += (const Vertex &other);
+    Vertex &operator *= (double val);
+    Vertex &operator /= (double val);
 };
 std::ostream& operator<<(std::ostream& out, const Vertex &p);
 
 struct Vector : Vertex
 {
+    Vector() : Vertex() {}
+    Vector(double xp, double yp, double zp) : Vertex(xp, yp, zp) {}
+    Vector(const Vertex &v1, const Vertex &v2);
+
+    Vector operator * (double val);
     // dot product
-    double operator*(const Vector &other) const;
+    double operator *(const Vector &other) const;
+    // cross product
+    Vector operator %(const Vector &other) const;
 };
 
 struct Triangle

@@ -71,6 +71,7 @@ void Scene3D::paintGL()
     drawAxis();
     drawWireframe();
     drawTriangles();
+    drawNormals();
 }
 
 // Set the initial position of actions doing by mouse
@@ -145,7 +146,7 @@ void Scene3D::updateForDraw()
             auto B = static_cast<uint8_t>(std::rand()*256/RAND_MAX);
             for (uint32_t iTri : faceTriangles)
             {
-                uint32_t index = m_drawVertices.size();
+                uint32_t index = static_cast<uint32_t>(m_drawVertices.size());
                 m_drawTriangles.push_back({index, index + 1, index + 2});
 
                 const common::Triangle &tri = m_triangles[iTri];
@@ -289,14 +290,24 @@ bool Scene3D::load()
         return false;
 
     // calculate normals
-    m_TriangleNormals.resize(m_triangles.size());
+    m_normals.resize(m_triangles.size());
+    m_normalIndices.resize(2 * m_triangles.size());
+    m_normalVertices.resize(2 * m_triangles.size());
     for (uint32_t i = 0; i < m_triangles.size(); ++i)
     {
         const uint32_t *indices = m_triangles[i].coord;
-        if (!calculateNormal(m_vertices[indices[0]],
-                             m_vertices[indices[1]],
-                             m_vertices[indices[2]],
-                             m_TriangleNormals[i]))
+        calculateNormal(m_vertices[indices[0]],
+                        m_vertices[indices[1]],
+                        m_vertices[indices[2]],
+                        m_normals[i]);
+
+        auto I = 2 * i;
+        m_normalVertices[I] = (m_vertices[indices[0]] + m_vertices[indices[1]] + m_vertices[indices[2]]) / 3;
+        m_normalVertices[I + 1] = m_normalVertices[I] + m_normals[i];
+        m_normalIndices[I    ] = I;
+        m_normalIndices[I + 1] = I + 1;
+
+        if (!normalize(m_normals[i]))
             return false;
     }
 
@@ -332,8 +343,8 @@ bool Scene3D::load()
                 continue;
             }
 
-            pairs[pair] = m_edges.size();
-            m_triangleEdges.push_back(m_edges.size());
+            pairs[pair] = static_cast<uint32_t>(m_edges.size());
+            m_triangleEdges.push_back(static_cast<uint32_t>(m_edges.size()));
             m_edges.push_back({i1, i2});
         }
     }
@@ -410,11 +421,11 @@ bool Scene3D::poligonize(double angleInRadians)
         std::vector<uint32_t> singleFace;
         singleFace.push_back(iStartTri);
         visited.insert(iStartTri);
-        m_triangleFaces[iStartTri] = m_faces.size();
+        m_triangleFaces[iStartTri] = static_cast<uint32_t>(m_faces.size());
         for (uint32_t i = 0; i < singleFace.size(); ++i)
         {
             uint32_t iTri = singleFace[i];
-            const common::Vector &normal = m_TriangleNormals[iTri];
+            const common::Vector &normal = m_normals[iTri];
             uint32_t*edges = &m_triangleEdges[3*iTri];
             for (uint32_t j = 0; j < 3; ++j)
             {
@@ -426,12 +437,12 @@ bool Scene3D::poligonize(double angleInRadians)
                         continue;
                     if (visited.find(iNeigh) != visited.end())
                         continue;
-                    const common::Vector &neighNormal = m_TriangleNormals[iNeigh];
+                    const common::Vector &neighNormal = m_normals[iNeigh];
                     if (normal * neighNormal < angleInRadians)
                         continue;
                     singleFace.push_back(iNeigh);
                     visited.insert(iNeigh);
-                    m_triangleFaces[iNeigh] = m_faces.size();
+                    m_triangleFaces[iNeigh] = static_cast<uint32_t>(m_faces.size());
                 }
             }
         }
@@ -464,7 +475,7 @@ void Scene3D::keyPressEvent(QKeyEvent *pe)
     case Qt::Key_Left:  translateLeft();  break;
     case Qt::Key_Right: translateRight(); break;
     case Qt::Key_Space: defaultScene();   break;
-    case Qt::Key_Escape:this->close();    break;
+    default: return;
     }
     updateGL();
 }
@@ -496,7 +507,7 @@ void Scene3D::drawTriangles()
     if(!(m_showMask & shTriangles))
         return;
 
-    // check do the mesh exist
+    // check does the mesh exist
     if (m_vertices.empty())
         return;
 
@@ -522,6 +533,28 @@ void Scene3D::drawTriangles()
     // set the facets
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(3*m_triangles.size()),
                    GL_UNSIGNED_INT, tria);
+}
+
+// Draw the facets of mesh
+void Scene3D::drawNormals()
+{
+    if(!(m_showMask & shNormals))
+        return;
+
+    // check do normals exist
+    if (m_normalVertices.empty())
+        return;
+
+    // to use the arrays of colors for drawing
+    glDisableClientState(GL_COLOR_ARRAY);
+    glColor3ub(0, 0, 255);
+    // set the vertices
+    glVertexPointer(3, GL_DOUBLE, 0, m_normalVertices.data());
+    // set the colors
+    glColorPointer(4, GL_UNSIGNED_BYTE, 0, m_drawColor.data());
+    // set the facets
+    glDrawElements(GL_LINES, static_cast<GLsizei>(m_normalIndices.size()),
+                   GL_UNSIGNED_INT, m_normalIndices.data());
 }
 
 bool Scene3D::fixTrianglesOrientation(const common::Triangle &tria1, common::Triangle &tria2,

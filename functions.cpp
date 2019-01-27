@@ -6,6 +6,7 @@
 #include <QByteArray>
 #include <fstream>
 #include <float.h>
+#include <math.h>
 
 // define the type of STL file (ascii or binary)
 int getStlFileFormat(const QString &path)
@@ -148,19 +149,19 @@ bool openStlAsc(char *filename, std::vector<common::Vertex> &vertices,
                 for (size_t k = 0; k < vertices.size(); k++)
                 {
                     // check does the distance by X axis lower than eps (little constant)
-                    double dx = fabs(x - vertices[k].x);
+                    double dx = abs(x - vertices[k].x);
                     if (dx < 1E-5)
                     {
                         // check does the distance by Y axis lower than eps (little constant)
-                        double dy = fabs(y - vertices[k].y);
+                        double dy = abs(y - vertices[k].y);
                         if (dy < 1E-5)
                         {
                             // check does the distance by Z axis lower than eps (little constant)
-                            double dz = fabs(z - vertices[k].z);
+                            double dz = abs(z - vertices[k].z);
                             if (dz < 1E-5)
                             {
                                 // the current vertex is close to existing one, set it into facet
-                                index[j] = k;
+                                index[j] = static_cast<unsigned int>(k);
                                 found_close_point = true;
                                 break;
                             }
@@ -172,7 +173,7 @@ bool openStlAsc(char *filename, std::vector<common::Vertex> &vertices,
                 if (!found_close_point)
                 {
                     // set the index of new vertex into facet
-                    index[j] = vertices.size();
+                    index[j] = static_cast<unsigned int>(vertices.size());
                     // add it to array
                     vertices.push_back({x, y, z});
                 }
@@ -232,16 +233,16 @@ bool openStlBin(char *filename, std::vector<common::Vertex> &vertices,
             // loop over previous vertices
             for (size_t k = 0; k < vertices.size(); k++) {
                 // check does the distance by X axis lower than eps (little constant)
-                double dx = fabs(static_cast<double>(coords[0]) - vertices[k].x);
+                double dx = abs(static_cast<double>(coords[0]) - vertices[k].x);
                 if (dx < 1E-5) {
                     // check does the distance by Y axis lower than eps (little constant)
-                    double dy = fabs(static_cast<double>(coords[1]) - vertices[k].y);
+                    double dy = abs(static_cast<double>(coords[1]) - vertices[k].y);
                     if (dy < 1E-5) {
                         // check does the distance by Z axis lower than eps (little constant)
-                        double dz = fabs(static_cast<double>(coords[2]) - vertices[k].z);
+                        double dz = abs(static_cast<double>(coords[2]) - vertices[k].z);
                         if (dz < 1E-5) {
                             // the current vertex is close to existing one, set it into facet
-                            index[j] = k;
+                            index[j] = static_cast<unsigned int>(k);
                             found_close_point = true;
                             break;
                         }
@@ -252,7 +253,7 @@ bool openStlBin(char *filename, std::vector<common::Vertex> &vertices,
             // the current vertex is not close to any existing
             if (!found_close_point) {
                 // set the index of new vertex into facet
-                index[j] = vertices.size();
+                index[j] = static_cast<unsigned int>(vertices.size());
                 // add it to array
                 vertices.push_back(coords);
             }
@@ -280,21 +281,10 @@ bool normalize(common::Vector &nor)
     return true;
 }
 
-bool calculateNormal(const common::Vertex &v1,
+void calculateNormal(const common::Vertex &v1,
                      const common::Vertex &v2,
                      const common::Vertex &v3,
                      common::Vector &nor)
 {
-    double xVect1 = v2.x - v1.x;
-    double yVect1 = v2.y - v1.y;
-    double zVect1 = v2.z - v1.z;
-    double xVect2 = v3.x - v1.x;
-    double yVect2 = v3.y - v1.y;
-    double zVect2 = v3.z - v1.z;
-
-    nor.x = yVect1*zVect2 - zVect1*yVect2;
-    nor.y = zVect1*xVect2 - xVect1*zVect2;
-    nor.z = xVect1*yVect2 - yVect1*xVect2;
-
-    return normalize(nor);
+    nor = common::Vector(v1, v2) % common::Vector(v1, v3);
 }
