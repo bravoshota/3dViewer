@@ -77,9 +77,11 @@ protected:
 
 public:
     Scene3D(QWidget *parent = nullptr);
-    void setData(std::vector<common::Vertex> &&vertices,
-                 std::vector<common::Triangle> &&faces);
-    bool load();
+    bool setModel(std::vector<common::Vertex> &&vertices,
+                  std::vector<common::Triangle> &&faces);
+    bool fitModel();
+    bool updateAll();
+    void changeOrientation();
     bool poligonize(double angleInRadians = 0.9);
     void keyPressEvent(QKeyEvent* pe) override;
 

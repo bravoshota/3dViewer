@@ -19,6 +19,7 @@ public:
 private slots:
 	void openModel();
 	void setDockOptions();
+    void changeOrientation();
     void poligonize();
     void keyPressEvent(QKeyEvent* pe);
 };

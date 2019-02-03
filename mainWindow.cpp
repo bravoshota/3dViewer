@@ -25,6 +25,9 @@ MainWindow::MainWindow()
     // create the 'Process' menu which will provide the start of different calculations
     menuActions = menuBar()->addMenu(tr("&Process"));
     // start poligonization
+    action = menuActions->addAction(tr("Change Orientation"), this, &MainWindow::changeOrientation);
+    action->setEnabled(false);
+    // start poligonization
     action = menuActions->addAction(tr("Poligonize"), this, &MainWindow::poligonize);
     action->setEnabled(false);
 
@@ -99,22 +102,25 @@ void MainWindow::openModel()
             }
         } else {
             QMessageBox msgBox;
-            msgBox.setText("This file corrupt and cannot be loaded");
+            msgBox.setText("The file is corrupt and cannot be loaded");
             msgBox.setInformativeText("STL Load");
             msgBox.setStandardButtons(QMessageBox::Ok);
             msgBox.exec();
             menuActions->actions()[0]->setEnabled(false);
+            menuActions->actions()[1]->setEnabled(false);
             return;
         }
-        widget->setData(std::move(vertices), std::move(faces));
-        if (!widget->load()) {
+        if (!widget->setModel(std::move(vertices), std::move(faces)) ||
+            !widget->updateAll()) {
             menuActions->actions()[0]->setEnabled(false);
-            QMessageBox::warning(nullptr, "ERROR!", "this STL file is corrupt");
+            menuActions->actions()[1]->setEnabled(false);
+            QMessageBox::warning(nullptr, "ERROR!", "Incorrect format of the model!");
             return;
         }
     }
 
     menuActions->actions()[0]->setEnabled(true);
+    menuActions->actions()[1]->setEnabled(true);
 
     // enable and set on 'Axis' checker
     menuOptions->actions()[0]->setChecked(true);
@@ -156,6 +162,11 @@ void MainWindow::setDockOptions()
 
     // update the showed elements
     widget->update();
+}
+
+void MainWindow::changeOrientation()
+{
+    widget->changeOrientation();
 }
 
 void MainWindow::poligonize()

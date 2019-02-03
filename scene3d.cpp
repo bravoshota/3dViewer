@@ -237,7 +237,7 @@ void Scene3D::defaultScene()
     m_rotateZ = 0;
     m_translX = 0;
     m_translZ = 0;
-    m_scale = m_scaleDefault;
+    m_scale = 1.0;
 }
 
 // Draw the axis
@@ -270,24 +270,60 @@ void Scene3D::drawAxis()
     glEnd();
 }
 
-void Scene3D::setData(std::vector<common::Vertex> &&vertices,
-                      std::vector<common::Triangle> &&faces)
+bool Scene3D::setModel(std::vector<common::Vertex> &&vertices,
+                       std::vector<common::Triangle> &&faces)
 {
     std::swap(m_vertices, vertices);
     std::swap(m_triangles, faces);
-    m_triangleFaces.clear();
-    m_faces.clear();
-    m_drawVertices.clear();
-    m_drawTriangles.clear();
-    m_drawColor.clear();
+    defaultScene();
+    return fitModel();
 }
 
-// Calculate the aspect ratio of given mesh
-bool Scene3D::load()
+bool Scene3D::fitModel()
 {
     // if we have no vertices return
     if (m_vertices.empty() || m_triangles.empty())
         return false;
+
+    // initiate the maximum and minimum values of X, Y and Z
+    double mx = DBL_MAX;
+    double my = DBL_MAX;
+    double mz = DBL_MAX;
+    double Mx =-DBL_MAX;
+    double My =-DBL_MAX;
+    double Mz =-DBL_MAX;
+    // loop over the parts
+    for (size_t i = 0; i < m_vertices.size(); ++i)
+    {
+        const common::Vertex &p = m_vertices[i];
+        // check and replace the maximum and minimum values of X, Y and Z
+        if (mx > p.x)
+            mx = p.x;
+        if (Mx < p.x)
+            Mx = p.x;
+        if (my > p.y)
+            my = p.y;
+        if (My < p.y)
+            My = p.y;
+        if (mz > p.z)
+            mz = p.z;
+        if (Mz < p.z)
+            Mz = p.z;
+    }
+
+    auto fixScale = [&](double val)
+    {
+        if (val > DBL_EPSILON && m_scaleDefault > 1/val)
+            m_scaleDefault = 1/val;
+    };
+
+    m_scaleDefault = 1;
+    fixScale(Mx - mx);
+    fixScale(My - my);
+    fixScale(Mz - mz);
+    m_scale = m_scaleDefault;
+
+    double normalLen = std::max(std::max(Mx - mx, My - my), Mz - mz) / 20;
 
     // calculate normals
     m_normals.resize(m_triangles.size());
@@ -301,19 +337,35 @@ bool Scene3D::load()
                         m_vertices[indices[2]],
                         m_normals[i]);
 
-        auto I = 2 * i;
-        m_normalVertices[I] = (m_vertices[indices[0]] + m_vertices[indices[1]] + m_vertices[indices[2]]) / 3;
-        m_normalVertices[I + 1] = m_normalVertices[I] + m_normals[i];
-        m_normalIndices[I    ] = I;
-        m_normalIndices[I + 1] = I + 1;
-
         if (!normalize(m_normals[i]))
             return false;
+
+        auto I = 2 * i;
+        m_normalVertices[I] = (m_vertices[indices[0]] + m_vertices[indices[1]] + m_vertices[indices[2]]) / 3;
+        m_normalVertices[I + 1] = m_normalVertices[I] + m_normals[i] * normalLen;
+        m_normalIndices[I    ] = I;
+        m_normalIndices[I + 1] = I + 1;
     }
 
-    // calculate wireframe and triangle-edge connector
+    return true;
+}
+
+// Calculate the aspect ratio of given mesh
+bool Scene3D::updateAll()
+{
+    m_triangleFaces.clear();
+    m_faces.clear();
+    m_drawVertices.clear();
+    m_drawTriangles.clear();
+    m_drawColor.clear();
     m_edges.clear();
     m_triangleEdges.clear();
+
+    // if we have no vertices return
+    if (m_vertices.empty() || m_triangles.empty())
+        return false;
+
+    // calculate wireframe and triangle-edge connector
     m_edges.reserve(m_triangles.size());
     m_triangleEdges.reserve(3*m_triangles.size());
 
@@ -360,48 +412,19 @@ bool Scene3D::load()
     // it's time to fix triangle normals' orientations
     fixTrianglesOrientation();
 
-    // initiate the maximum and minimum values of X, Y and Z
-    double mx = DBL_MAX;
-    double my = DBL_MAX;
-    double mz = DBL_MAX;
-    double Mx =-DBL_MAX;
-    double My =-DBL_MAX;
-    double Mz =-DBL_MAX;
-    // loop over the parts
-    for (size_t i = 0; i < m_vertices.size(); ++i)
-    {
-        const common::Vertex &p = m_vertices[i];
-        // check and replace the maximum and minimum values of X, Y and Z
-        if (mx > p.x)
-            mx = p.x;
-        if (Mx < p.x)
-            Mx = p.x;
-        if (my > p.y)
-            my = p.y;
-        if (My < p.y)
-            My = p.y;
-        if (mz > p.z)
-            mz = p.z;
-        if (Mz < p.z)
-            Mz = p.z;
-    }
-
-    m_scaleDefault = 1;
-
-    auto fixScale = [&](double val)
-    {
-        if (val > DBL_EPSILON && m_scaleDefault > 1/val)
-            m_scaleDefault = 1/val;
-    };
-
-    fixScale(Mx - mx);
-    fixScale(My - my);
-    fixScale(Mz - mz);
-
-    defaultScene();
     updateForDraw();
 
     return true;
+}
+
+void Scene3D::changeOrientation()
+{
+    for (auto &tri : m_triangles)
+        std::swap(tri.coord[0], tri.coord[1]);
+
+    fitModel();
+    updateAll();
+    update();
 }
 
 bool Scene3D::poligonize(double angleInRadians)
