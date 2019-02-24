@@ -34,10 +34,18 @@ struct Vector : Vertex
     Vector(const Vertex &v1, const Vertex &v2);
 
     Vector operator * (double val);
-    // dot product
+    /**
+     * dot product
+     **/
     double operator *(const Vector &other) const;
-    // cross product
+    /**
+     * cross product
+     **/
     Vector operator %(const Vector &other) const;
+    /**
+     * return the length of the vector
+     **/
+    double length() const;
 };
 
 struct Triangle

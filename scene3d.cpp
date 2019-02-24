@@ -10,7 +10,8 @@
 // Initiation of Scene3D object
 Scene3D::Scene3D(QWidget* parent) : QGLWidget(parent)
 {
-    m_scaleDefault = 1;
+    m_scaleDefault = 1.0;
+    m_totalArea = 0.0;
     defaultScene();
 }
 
@@ -121,52 +122,56 @@ void Scene3D::updateForDraw()
     m_drawVertices.clear();
     m_drawTriangles.clear();
 
+    auto addTriangle = [&](uint32_t iTri, uint8_t R, uint8_t G, uint8_t B)
+    {
+        uint32_t index = static_cast<uint32_t>(m_drawVertices.size());
+        m_drawTriangles.push_back({index, index + 1, index + 2});
+
+        auto addTriangle1 = [&](uint8_t r, uint8_t g, uint8_t b)
+        {
+            const common::Triangle &tri = m_triangles[iTri];
+            for (uint8_t i = 0; i < 3; ++i)
+            {
+                m_drawVertices.push_back(m_vertices[tri.coord[i]]);
+                m_drawColor.push_back(r);
+                m_drawColor.push_back(g);
+                m_drawColor.push_back(b);
+                m_drawColor.push_back(A);
+            }
+        };
+
+        if (m_isTriangleSupported[iTri])
+            addTriangle1(255, 0, 0);
+        else
+            addTriangle1(R, G, B);
+    };
+
+    m_drawColor.reserve(12 * m_triangles.size());
+    m_drawVertices.reserve(3 * m_triangles.size());
+    m_drawTriangles.reserve(m_triangles.size() - m_supportedTriangles.size());
+
     if (m_faces.empty())
     {
-        // initiate the total number of vertices of all parts
-        m_drawColor.resize(4 * m_vertices.size());
+        uint8_t R = 50;
+        uint8_t G = 170;
+        uint8_t B = 128;
 
-        // loop over the parts
-        for (size_t i = 0; i < m_vertices.size(); ++i)
+        for (uint32_t i = 0 ; i < m_triangles.size(); ++i)
         {
-            m_drawColor[4*i + 0] = 50;
-            m_drawColor[4*i + 1] = 170;
-            m_drawColor[4*i + 2] = 128;
-            m_drawColor[4*i + 3] = A;
+            addTriangle(i, R, G, B);
         }
     }
     else
     {
-        m_drawColor.reserve(12 * m_triangles.size());
-        m_drawVertices.reserve(3 * m_triangles.size());
-        m_drawTriangles.reserve(m_triangles.size() - m_supportedTriangles.size());
         for (const auto &faceTriangles : m_faces)
         {
             auto R = static_cast<uint8_t>(std::rand()*256/RAND_MAX);
             auto G = static_cast<uint8_t>(std::rand()*256/RAND_MAX);
             auto B = static_cast<uint8_t>(std::rand()*256/RAND_MAX);
-            for (uint32_t iTri : faceTriangles)
+
+            for (uint32_t i : faceTriangles)
             {
-                uint32_t index = static_cast<uint32_t>(m_drawVertices.size());
-                m_drawTriangles.push_back({index, index + 1, index + 2});
-
-                auto addTriangle = [&](uint8_t r, uint8_t g, uint8_t b)
-                {
-                    const common::Triangle &tri = m_triangles[iTri];
-                    for (uint8_t i = 0; i < 3; ++i)
-                    {
-                        m_drawVertices.push_back(m_vertices[tri.coord[i]]);
-                        m_drawColor.push_back(r);
-                        m_drawColor.push_back(g);
-                        m_drawColor.push_back(b);
-                        m_drawColor.push_back(A);
-                    }
-                };
-
-                if (m_isTriangleSupported[iTri])
-                    addTriangle(255, 0, 0);
-                else
-                    addTriangle(R, G, B);
+                addTriangle(i, R, G, B);
             }
         }
     }
@@ -290,6 +295,7 @@ bool Scene3D::setModel(std::vector<common::Vertex> &&vertices,
 
 bool Scene3D::fitModel()
 {
+    m_totalArea = 0.0;
     m_supportedTriangles.clear();
     m_isTriangleSupported.clear();
 
@@ -341,6 +347,7 @@ bool Scene3D::fitModel()
 
     // calculate normals
     m_normals.resize(m_triangles.size());
+    m_triangleArea.resize(m_triangles.size());
     m_normalIndices.resize(2 * m_triangles.size());
     m_normalVertices.resize(2 * m_triangles.size());
     for (uint32_t i = 0; i < m_triangles.size(); ++i)
@@ -350,6 +357,9 @@ bool Scene3D::fitModel()
                         m_vertices[indices[1]],
                         m_vertices[indices[2]],
                         m_normals[i]);
+
+        m_triangleArea[i] = m_normals[i].length();
+        m_totalArea += m_triangleArea[i];
 
         if (!normalize(m_normals[i]))
             return false;
@@ -438,7 +448,7 @@ void Scene3D::changeOrientation()
 
     fitModel();
     updateAll();
-    update();
+    updateGL();
 }
 
 bool Scene3D::poligonize(double angleInRadians)
@@ -492,8 +502,9 @@ bool Scene3D::poligonize(double angleInRadians)
     return true;
 }
 
-void Scene3D::detectSupportedTriangles()
+double Scene3D::detectSupportedTriangles()
 {
+    double area = 0.0;
     double cosValue = -cos(45.0);
     m_supportedTriangles.clear();
     m_isTriangleSupported.clear();
@@ -506,6 +517,7 @@ void Scene3D::detectSupportedTriangles()
         {
             m_supportedTriangles.push_back(i);
             m_isTriangleSupported.push_back(true);
+            area += m_triangleArea[i];
         }
         else
         {
@@ -515,6 +527,8 @@ void Scene3D::detectSupportedTriangles()
 
     updateForDraw();
     updateGL();
+
+    return area;
 }
 
 void Scene3D::keyPressEvent(QKeyEvent *pe)

@@ -19,6 +19,7 @@ private:
     std::vector<common::Vertex>        m_vertices;
     std::vector<common::Triangle>      m_triangles;
     std::vector<common::Vector>        m_normals;
+    std::vector<double>                m_triangleArea;
     std::vector<common::Vertex>        m_normalVertices;
     std::vector<uint32_t>              m_normalIndices;
     std::vector<common::Edge>          m_edges;
@@ -28,6 +29,7 @@ private:
     std::vector<std::vector<uint32_t>> m_faces;
     std::vector<uint32_t>              m_supportedTriangles;
     std::vector<bool>                  m_isTriangleSupported;
+    double                             m_totalArea;
     // drawing helpers
     std::vector<common::Vertex>   m_drawVertices;
     std::vector<common::Triangle> m_drawTriangles;
@@ -85,8 +87,10 @@ public:
     bool updateAll();
     void changeOrientation();
     bool poligonize(double angleInRadians = 0.9);
-    void detectSupportedTriangles();
+    double detectSupportedTriangles();
     void keyPressEvent(QKeyEvent* pe) override;
+
+    inline double totalArea() {return m_totalArea;}
 
     int m_showMask;
 };

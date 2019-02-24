@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QLabel>
 #include <QDir>
 
 class Scene3D;
@@ -15,6 +16,7 @@ public:
     QMenu *menuActions; // 'Process' menu
     QMenu *menuOptions; // 'Elements' menu
     QDir m_lastOpenedDir;
+    QLabel m_statusLabel;
 
 private slots:
 	void openModel();

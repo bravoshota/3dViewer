@@ -1,4 +1,6 @@
 #include "common.h"
+#include <math.h>
+
 namespace common {
 
 Vertex::Vertex() : x(0), y(0), z(0)
@@ -85,6 +87,11 @@ double Vector::operator*(const Vector &other) const
 Vector Vector::operator %(const Vector &other) const
 {
     return {y*other.z - z*other.y, z*other.x - x*other.z, x*other.y - y*other.x};
+}
+
+double Vector::length() const
+{
+    return sqrt(x * x + y * y + z * z);
 }
 
 Triangle::Triangle(uint32_t i1, uint32_t i2, uint32_t i3)

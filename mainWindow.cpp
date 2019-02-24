@@ -6,6 +6,7 @@
 #include <QMenu>
 #include <QMessageBox>
 #include <QtWidgets>
+#include <float.h>
 
 // The MainWindow class to visualization of 3D-objects and their processing control
 MainWindow::MainWindow()
@@ -64,6 +65,8 @@ MainWindow::MainWindow()
     action->setChecked(false);
     action->setEnabled(false);
     connect(action, &QAction::toggled, this, &MainWindow::setDockOptions);
+
+    statusBar()->addWidget(&m_statusLabel);
 
     m_lastOpenedDir = QDir::currentPath();
 }
@@ -143,6 +146,8 @@ void MainWindow::openModel()
 
     // refresh the 'elements visibility' variable
     setDockOptions();
+
+    m_statusLabel.clear();
 }
 
 // Create the 'elements visibility' variable according to checkers of 'Elements' menu
@@ -173,6 +178,7 @@ void MainWindow::setDockOptions()
 void MainWindow::changeOrientation()
 {
     widget->changeOrientation();
+    m_statusLabel.clear();
 }
 
 void MainWindow::poligonize()
@@ -182,7 +188,22 @@ void MainWindow::poligonize()
 
 void MainWindow::detectSupportedTriangles()
 {
-    widget->detectSupportedTriangles();
+    double area = widget->detectSupportedTriangles();
+
+    QString str;
+    if (area < DBL_EPSILON)
+    {
+        str = "No support material needed";
+    }
+    else
+    {
+        double totalArea = widget->totalArea();
+
+        str = QString("Area of supported/total triangles: %1/%2 (%3%)")
+                .arg(area).arg(totalArea).arg(static_cast<uint32_t>(100 * area/totalArea));
+    }
+
+    m_statusLabel.setText(str);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *pe)
