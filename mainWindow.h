@@ -21,5 +21,6 @@ private slots:
 	void setDockOptions();
     void changeOrientation();
     void poligonize();
+    void detectSupportedTriangles();
     void keyPressEvent(QKeyEvent* pe);
 };

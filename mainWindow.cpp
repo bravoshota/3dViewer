@@ -30,6 +30,9 @@ MainWindow::MainWindow()
     // start poligonization
     action = menuActions->addAction(tr("Poligonize"), this, &MainWindow::poligonize);
     action->setEnabled(false);
+    // detect areas which need support
+    action = menuActions->addAction(tr("Detect Supported Areas"), this, &MainWindow::detectSupportedTriangles);
+    action->setEnabled(false);
 
     // create widget (Scene3D object) to show the 3D-objects
     widget = new Scene3D(this);
@@ -108,12 +111,14 @@ void MainWindow::openModel()
             msgBox.exec();
             menuActions->actions()[0]->setEnabled(false);
             menuActions->actions()[1]->setEnabled(false);
+            menuActions->actions()[2]->setEnabled(false);
             return;
         }
         if (!widget->setModel(std::move(vertices), std::move(faces)) ||
             !widget->updateAll()) {
             menuActions->actions()[0]->setEnabled(false);
             menuActions->actions()[1]->setEnabled(false);
+            menuActions->actions()[2]->setEnabled(false);
             QMessageBox::warning(nullptr, "ERROR!", "Incorrect format of the model!");
             return;
         }
@@ -121,6 +126,7 @@ void MainWindow::openModel()
 
     menuActions->actions()[0]->setEnabled(true);
     menuActions->actions()[1]->setEnabled(true);
+    menuActions->actions()[2]->setEnabled(true);
 
     // enable and set on 'Axis' checker
     menuOptions->actions()[0]->setChecked(true);
@@ -172,6 +178,11 @@ void MainWindow::changeOrientation()
 void MainWindow::poligonize()
 {
     widget->poligonize();
+}
+
+void MainWindow::detectSupportedTriangles()
+{
+    widget->detectSupportedTriangles();
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *pe)

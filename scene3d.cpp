@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <fstream>
 #include <float.h>
+#include <math.h>
 
 // Initiation of Scene3D object
 Scene3D::Scene3D(QWidget* parent) : QGLWidget(parent)
@@ -138,7 +139,7 @@ void Scene3D::updateForDraw()
     {
         m_drawColor.reserve(12 * m_triangles.size());
         m_drawVertices.reserve(3 * m_triangles.size());
-        m_drawTriangles.reserve(m_triangles.size());
+        m_drawTriangles.reserve(m_triangles.size() - m_supportedTriangles.size());
         for (const auto &faceTriangles : m_faces)
         {
             auto R = static_cast<uint8_t>(std::rand()*256/RAND_MAX);
@@ -149,15 +150,23 @@ void Scene3D::updateForDraw()
                 uint32_t index = static_cast<uint32_t>(m_drawVertices.size());
                 m_drawTriangles.push_back({index, index + 1, index + 2});
 
-                const common::Triangle &tri = m_triangles[iTri];
-                for (uint8_t i = 0; i < 3; ++i)
+                auto addTriangle = [&](uint8_t r, uint8_t g, uint8_t b)
                 {
-                    m_drawVertices.push_back(m_vertices[tri.coord[i]]);
-                    m_drawColor.push_back(R);
-                    m_drawColor.push_back(G);
-                    m_drawColor.push_back(B);
-                    m_drawColor.push_back(A);
-                }
+                    const common::Triangle &tri = m_triangles[iTri];
+                    for (uint8_t i = 0; i < 3; ++i)
+                    {
+                        m_drawVertices.push_back(m_vertices[tri.coord[i]]);
+                        m_drawColor.push_back(r);
+                        m_drawColor.push_back(g);
+                        m_drawColor.push_back(b);
+                        m_drawColor.push_back(A);
+                    }
+                };
+
+                if (m_isTriangleSupported[iTri])
+                    addTriangle(255, 0, 0);
+                else
+                    addTriangle(R, G, B);
             }
         }
     }
@@ -281,9 +290,14 @@ bool Scene3D::setModel(std::vector<common::Vertex> &&vertices,
 
 bool Scene3D::fitModel()
 {
+    m_supportedTriangles.clear();
+    m_isTriangleSupported.clear();
+
     // if we have no vertices return
     if (m_vertices.empty() || m_triangles.empty())
         return false;
+
+    m_isTriangleSupported.insert(m_isTriangleSupported.begin(), m_triangles.size(), false);
 
     // initiate the maximum and minimum values of X, Y and Z
     double mx = DBL_MAX;
@@ -478,6 +492,31 @@ bool Scene3D::poligonize(double angleInRadians)
     return true;
 }
 
+void Scene3D::detectSupportedTriangles()
+{
+    double cosValue = -cos(45.0);
+    m_supportedTriangles.clear();
+    m_isTriangleSupported.clear();
+    m_isTriangleSupported.reserve(m_normals.size());
+
+    for (uint32_t i = 0; i < m_normals.size(); ++i)
+    {
+        const common::Vector &nor = m_normals[i];
+        if (nor.z < cosValue)
+        {
+            m_supportedTriangles.push_back(i);
+            m_isTriangleSupported.push_back(true);
+        }
+        else
+        {
+            m_isTriangleSupported.push_back(false);
+        }
+    }
+
+    updateForDraw();
+    updateGL();
+}
+
 void Scene3D::keyPressEvent(QKeyEvent *pe)
 {
     // set the actions of keyboard keys
@@ -555,8 +594,7 @@ void Scene3D::drawTriangles()
     glColorPointer(4, GL_UNSIGNED_BYTE, 0, m_drawColor.data());
     // set the facets
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(3*m_triangles.size()),
-                   GL_UNSIGNED_INT, tria);
-}
+                   GL_UNSIGNED_INT, tria);}
 
 // Draw the facets of mesh
 void Scene3D::drawNormals()

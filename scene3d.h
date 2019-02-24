@@ -26,6 +26,8 @@ private:
     std::vector<std::vector<uint32_t>> m_edgeTriangles;
     std::vector<uint32_t>              m_triangleFaces;
     std::vector<std::vector<uint32_t>> m_faces;
+    std::vector<uint32_t>              m_supportedTriangles;
+    std::vector<bool>                  m_isTriangleSupported;
     // drawing helpers
     std::vector<common::Vertex>   m_drawVertices;
     std::vector<common::Triangle> m_drawTriangles;
@@ -83,6 +85,7 @@ public:
     bool updateAll();
     void changeOrientation();
     bool poligonize(double angleInRadians = 0.9);
+    void detectSupportedTriangles();
     void keyPressEvent(QKeyEvent* pe) override;
 
     int m_showMask;
