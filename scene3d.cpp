@@ -74,6 +74,7 @@ void Scene3D::paintGL()
     drawWireframe();
     drawTriangles();
     drawNormals();
+    drawGround();
 }
 
 // Set the initial position of actions doing by mouse
@@ -252,6 +253,9 @@ void Scene3D::defaultScene()
     m_translX = 0;
     m_translZ = 0;
     m_scale = 1.0;
+    m_groundHeight = 0.0;
+    m_boundBoxMin = { DBL_MAX, DBL_MAX, DBL_MAX};
+    m_boundBoxMax = {-DBL_MAX,-DBL_MAX,-DBL_MAX};
 }
 
 // Draw the axis
@@ -306,29 +310,25 @@ bool Scene3D::fitModel()
     m_isTriangleSupported.insert(m_isTriangleSupported.begin(), m_triangles.size(), false);
 
     // initiate the maximum and minimum values of X, Y and Z
-    double mx = DBL_MAX;
-    double my = DBL_MAX;
-    double mz = DBL_MAX;
-    double Mx =-DBL_MAX;
-    double My =-DBL_MAX;
-    double Mz =-DBL_MAX;
+    m_boundBoxMin = { DBL_MAX, DBL_MAX, DBL_MAX};
+    m_boundBoxMax = {-DBL_MAX,-DBL_MAX,-DBL_MAX};
     // loop over the parts
     for (size_t i = 0; i < m_vertices.size(); ++i)
     {
         const common::Vertex &p = m_vertices[i];
         // check and replace the maximum and minimum values of X, Y and Z
-        if (mx > p.x)
-            mx = p.x;
-        if (Mx < p.x)
-            Mx = p.x;
-        if (my > p.y)
-            my = p.y;
-        if (My < p.y)
-            My = p.y;
-        if (mz > p.z)
-            mz = p.z;
-        if (Mz < p.z)
-            Mz = p.z;
+        if (m_boundBoxMin.x > p.x)
+            m_boundBoxMin.x = p.x;
+        if (m_boundBoxMax.x < p.x)
+            m_boundBoxMax.x = p.x;
+        if (m_boundBoxMin.y > p.y)
+            m_boundBoxMin.y = p.y;
+        if (m_boundBoxMax.y < p.y)
+            m_boundBoxMax.y = p.y;
+        if (m_boundBoxMin.z > p.z)
+            m_boundBoxMin.z = p.z;
+        if (m_boundBoxMax.z < p.z)
+            m_boundBoxMax.z = p.z;
     }
 
     auto fixScale = [&](double val)
@@ -338,12 +338,15 @@ bool Scene3D::fitModel()
     };
 
     m_scaleDefault = 1;
-    fixScale(Mx - mx);
-    fixScale(My - my);
-    fixScale(Mz - mz);
+    fixScale(m_boundBoxMax.x - m_boundBoxMin.x);
+    fixScale(m_boundBoxMax.y - m_boundBoxMin.y);
+    fixScale(m_boundBoxMax.z - m_boundBoxMin.z);
     m_scale = m_scaleDefault;
 
-    double normalLen = std::max(std::max(Mx - mx, My - my), Mz - mz) / 20;
+    double normalLen = std::max(std::max(
+            m_boundBoxMax.x - m_boundBoxMin.x,
+            m_boundBoxMax.y - m_boundBoxMin.y),
+            m_boundBoxMax.z - m_boundBoxMin.z) / 20;
 
     // calculate normals
     m_normals.resize(m_triangles.size());
@@ -369,6 +372,60 @@ bool Scene3D::fitModel()
         m_normalVertices[I + 1] = m_normalVertices[I] + m_normals[i] * normalLen;
         m_normalIndices[I    ] = I;
         m_normalIndices[I + 1] = I + 1;
+    }
+
+    // calculate vertices for ground
+    {
+        double minX = m_boundBoxMin.x;
+        double minY = m_boundBoxMin.y;
+        double maxX = m_boundBoxMax.x;
+        double maxY = m_boundBoxMax.y;
+        double lenY = 2.0 * (maxY - minY);
+        double lenX = 2.0 * (maxX - minX);
+        minX -= lenX*0.25;
+        maxX += lenX*0.25;
+        minY -= lenY*0.25;
+        maxY += lenY*0.25;
+
+        double stepSize = 2.0;
+        size_t stepsX = static_cast<size_t>(lenX / stepSize);
+        size_t stepsY = static_cast<size_t>(lenY / stepSize);
+        if (stepsX < 10 || stepsY < 10)
+        {
+            if (stepsX < stepsY)
+            {
+                stepsX = 10;
+                stepSize = lenX / 10;
+                stepsY = static_cast<size_t>(lenY / stepSize);
+            }
+            else
+            {
+                stepsY = 10;
+                stepSize = lenY / 10;
+                stepsX = static_cast<size_t>(lenX / stepSize);
+            }
+        }
+
+        m_groundVertices.clear();
+        m_groundVertices.reserve((stepsX - 2) * (stepsY - 2) * 2);
+
+        for (size_t i = 1; i < stepsX; ++i)
+        {
+            double x = minX + i*stepSize;
+            m_groundVertices.push_back({x, minY, m_groundHeight});
+            m_groundVertices.push_back({x, maxY, m_groundHeight});
+        }
+        for (size_t i = 1; i < stepsY; ++i)
+        {
+            double y = minY + i*stepSize;
+            m_groundVertices.push_back({minX, y, m_groundHeight});
+            m_groundVertices.push_back({maxX, y, m_groundHeight});
+        }
+
+        m_groundIndices.clear();
+        m_groundIndices.resize(m_groundVertices.size());
+        for (uint32_t i = 0; i < m_groundVertices.size(); ++i)
+            m_groundIndices[i] = i;
     }
 
     return true;
@@ -600,7 +657,6 @@ void Scene3D::drawTriangles()
         tria = m_drawTriangles.data();
     }
 
-    // to use the arrays of colors for drawing
     glEnableClientState(GL_COLOR_ARRAY);
     // set the vertices
     glVertexPointer(3, GL_DOUBLE, 0, vert);
@@ -620,16 +676,31 @@ void Scene3D::drawNormals()
     if (m_normalVertices.empty())
         return;
 
-    // to use the arrays of colors for drawing
     glDisableClientState(GL_COLOR_ARRAY);
     glColor3ub(0, 0, 255);
     // set the vertices
     glVertexPointer(3, GL_DOUBLE, 0, m_normalVertices.data());
-    // set the colors
-    glColorPointer(4, GL_UNSIGNED_BYTE, 0, m_drawColor.data());
     // set the facets
     glDrawElements(GL_LINES, static_cast<GLsizei>(m_normalIndices.size()),
                    GL_UNSIGNED_INT, m_normalIndices.data());
+}
+
+// Draw the facets of mesh
+void Scene3D::drawGround()
+{
+    if(!(m_showMask & shGround))
+        return;
+
+    if (m_groundVertices.empty())
+        return;
+
+    glDisableClientState(GL_COLOR_ARRAY);
+    glColor4ub(100, 100, 200, 200);
+    // set the vertices
+    glVertexPointer(3, GL_DOUBLE, 0, m_groundVertices.data());
+    // set the facets
+    glDrawElements(GL_LINES, static_cast<GLsizei>(m_groundIndices.size()),
+                   GL_UNSIGNED_INT, m_groundIndices.data());
 }
 
 bool Scene3D::fixTrianglesOrientation(const common::Triangle &tria1, common::Triangle &tria2,

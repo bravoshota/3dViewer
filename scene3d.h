@@ -10,6 +10,7 @@
 #define shWireframe 0x02
 #define shTriangles 0x04
 #define shNormals   0x08
+#define shGround    0x10
 
 // Scene3D class to 3D objects visualization using Qt
 class Scene3D : public QGLWidget
@@ -30,6 +31,11 @@ private:
     std::vector<uint32_t>              m_supportedTriangles;
     std::vector<bool>                  m_isTriangleSupported;
     double                             m_totalArea;
+    double                             m_groundHeight;
+    common::Vertex                     m_boundBoxMin;
+    common::Vertex                     m_boundBoxMax;
+    std::vector<common::Vertex>        m_groundVertices;
+    std::vector<uint32_t>              m_groundIndices;
     // drawing helpers
     std::vector<common::Vertex>   m_drawVertices;
     std::vector<common::Triangle> m_drawTriangles;
@@ -64,6 +70,7 @@ private:
     void drawWireframe();
     void drawTriangles();
     void drawNormals();
+    void drawGround();
 
     bool fixTrianglesOrientation(const common::Triangle &tria1, common::Triangle &tria2,
                                  const common::Edge &edge) const;

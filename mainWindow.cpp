@@ -65,6 +65,12 @@ MainWindow::MainWindow()
     action->setChecked(false);
     action->setEnabled(false);
     connect(action, &QAction::toggled, this, &MainWindow::setDockOptions);
+    // create the checker for ground
+    action = menuOptions->addAction(tr("Ground"));
+    action->setCheckable(true);
+    action->setChecked(true);
+    action->setEnabled(false);
+    connect(action, &QAction::toggled, this, &MainWindow::setDockOptions);
 
     statusBar()->addWidget(&m_statusLabel);
 
@@ -143,6 +149,9 @@ void MainWindow::openModel()
     // enable and set on 'Normals' checker
     menuOptions->actions()[3]->setChecked(false);
     menuOptions->actions()[3]->setEnabled(true);
+    // enable and set on 'Normals' checker
+    menuOptions->actions()[4]->setChecked(true);
+    menuOptions->actions()[4]->setEnabled(true);
 
     // refresh the 'elements visibility' variable
     setDockOptions();
@@ -170,6 +179,9 @@ void MainWindow::setDockOptions()
     // set the mask of 'Normals' item
     if (actions[3]->isChecked())
         widget->m_showMask |= shNormals;
+    // set the mask of 'Ground' item
+    if (actions[4]->isChecked())
+        widget->m_showMask |= shGround;
 
     // update the showed elements
     widget->update();
