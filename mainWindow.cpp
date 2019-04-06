@@ -7,6 +7,7 @@
 #include <QMessageBox>
 #include <QtWidgets>
 #include <float.h>
+#include <math.h>
 
 // The MainWindow class to visualization of 3D-objects and their processing control
 MainWindow::MainWindow()
@@ -24,15 +25,21 @@ MainWindow::MainWindow()
     menu->addAction(tr("&Quit"), this, &QWidget::close);
 
     // create the 'Process' menu which will provide the start of different calculations
-    menuActions = menuBar()->addMenu(tr("&Process"));
+    m_menuActions = menuBar()->addMenu(tr("&Process"));
     // start poligonization
-    action = menuActions->addAction(tr("Change Orientation"), this, &MainWindow::changeOrientation);
+    action = m_menuActions->addAction(tr("Change Orientation"), this, &MainWindow::changeOrientation);
     action->setEnabled(false);
     // start poligonization
-    action = menuActions->addAction(tr("Poligonize"), this, &MainWindow::poligonize);
+    action = m_menuActions->addAction(tr("Poligonize"), this, &MainWindow::poligonize);
     action->setEnabled(false);
     // detect areas which need support
-    action = menuActions->addAction(tr("Detect Supported Areas"), this, &MainWindow::detectSupportedTriangles);
+    action = m_menuActions->addAction(tr("Detect Supported Areas"), this, &MainWindow::detectSupportedTriangles);
+    action->setEnabled(false);
+    ////////////////////////////////////
+    m_menuActions->addSeparator();
+    ////////////////////////////////////
+    // detect areas which need support
+    action = m_menuActions->addAction(tr("Edit ground height"), this, &MainWindow::editGroundHeight);
     action->setEnabled(false);
 
     // create widget (Scene3D object) to show the 3D-objects
@@ -41,32 +48,32 @@ MainWindow::MainWindow()
     setCentralWidget(widget);
 
     // create the 'Elements' menu which will provide the control of visibility of elements
-    menuOptions = menuBar()->addMenu(tr("Elements"));
+    m_menuOptions = menuBar()->addMenu(tr("Elements"));
     // create the checker for axis
-    action = menuOptions->addAction(tr("Axis"));
+    action = m_menuOptions->addAction(tr("Axis"));
     action->setCheckable(true);
     action->setChecked(true);
     connect(action, &QAction::toggled, this, &MainWindow::setDockOptions);
     // create the checker for solid's wireframe
-    action = menuOptions->addAction(tr("Wireframe"));
+    action = m_menuOptions->addAction(tr("Wireframe"));
     action->setCheckable(true);
     action->setChecked(false);
     action->setEnabled(false);
     connect(action, &QAction::toggled, this, &MainWindow::setDockOptions);
     // create the checker for solid's triangles
-    action = menuOptions->addAction(tr("Triangles"));
+    action = m_menuOptions->addAction(tr("Triangles"));
     action->setCheckable(true);
     action->setChecked(false);
     action->setEnabled(false);
     connect(action, &QAction::toggled, this, &MainWindow::setDockOptions);
     // create the checker for triangles' normals
-    action = menuOptions->addAction(tr("Normals"));
+    action = m_menuOptions->addAction(tr("Normals"));
     action->setCheckable(true);
     action->setChecked(false);
     action->setEnabled(false);
     connect(action, &QAction::toggled, this, &MainWindow::setDockOptions);
     // create the checker for ground
-    action = menuOptions->addAction(tr("Ground"));
+    action = m_menuOptions->addAction(tr("Ground"));
     action->setCheckable(true);
     action->setChecked(true);
     action->setEnabled(false);
@@ -75,6 +82,11 @@ MainWindow::MainWindow()
     statusBar()->addWidget(&m_statusLabel);
 
     m_lastOpenedDir = QDir::currentPath();
+}
+
+QString MainWindow::generateGroundString() const
+{
+    return QString("Ground Value = %1 mm").arg(widget->groundValue());
 }
 
 // Open the STL file
@@ -118,52 +130,54 @@ void MainWindow::openModel()
             msgBox.setInformativeText("STL Load");
             msgBox.setStandardButtons(QMessageBox::Ok);
             msgBox.exec();
-            menuActions->actions()[0]->setEnabled(false);
-            menuActions->actions()[1]->setEnabled(false);
-            menuActions->actions()[2]->setEnabled(false);
+            m_menuActions->actions()[0]->setEnabled(false);
+            m_menuActions->actions()[1]->setEnabled(false);
+            m_menuActions->actions()[2]->setEnabled(false);
             return;
         }
         if (!widget->setModel(std::move(vertices), std::move(faces)) ||
             !widget->updateAll()) {
-            menuActions->actions()[0]->setEnabled(false);
-            menuActions->actions()[1]->setEnabled(false);
-            menuActions->actions()[2]->setEnabled(false);
+            m_menuActions->actions()[0]->setEnabled(false);
+            m_menuActions->actions()[1]->setEnabled(false);
+            m_menuActions->actions()[2]->setEnabled(false);
             QMessageBox::warning(nullptr, "ERROR!", "Incorrect format of the model!");
             return;
         }
     }
 
-    menuActions->actions()[0]->setEnabled(true);
-    menuActions->actions()[1]->setEnabled(true);
-    menuActions->actions()[2]->setEnabled(true);
+    m_menuActions->actions()[0]->setEnabled(true);
+    m_menuActions->actions()[1]->setEnabled(true);
+    m_menuActions->actions()[2]->setEnabled(true);
+    // [3]: skip separator;
+    m_menuActions->actions()[4]->setEnabled(true);
 
     // enable and set on 'Axis' checker
-    menuOptions->actions()[0]->setChecked(true);
-    menuOptions->actions()[0]->setEnabled(true);
+    m_menuOptions->actions()[0]->setChecked(true);
+    m_menuOptions->actions()[0]->setEnabled(true);
     // enable and set on 'Wireframe' checker
-    menuOptions->actions()[1]->setChecked(true);
-    menuOptions->actions()[1]->setEnabled(true);
+    m_menuOptions->actions()[1]->setChecked(true);
+    m_menuOptions->actions()[1]->setEnabled(true);
     // enable and set on 'Triangles' checker
-    menuOptions->actions()[2]->setChecked(true);
-    menuOptions->actions()[2]->setEnabled(true);
+    m_menuOptions->actions()[2]->setChecked(true);
+    m_menuOptions->actions()[2]->setEnabled(true);
     // enable and set on 'Normals' checker
-    menuOptions->actions()[3]->setChecked(false);
-    menuOptions->actions()[3]->setEnabled(true);
+    m_menuOptions->actions()[3]->setChecked(false);
+    m_menuOptions->actions()[3]->setEnabled(true);
     // enable and set on 'Normals' checker
-    menuOptions->actions()[4]->setChecked(true);
-    menuOptions->actions()[4]->setEnabled(true);
+    m_menuOptions->actions()[4]->setChecked(true);
+    m_menuOptions->actions()[4]->setEnabled(true);
 
     // refresh the 'elements visibility' variable
     setDockOptions();
 
-    m_statusLabel.clear();
+    m_statusLabel.setText(generateGroundString());
 }
 
 // Create the 'elements visibility' variable according to checkers of 'Elements' menu
 void MainWindow::setDockOptions()
 {
     // use the 'Elements' menu
-    QList<QAction*> actions = menuOptions->actions();
+    QList<QAction*> actions = m_menuOptions->actions();
     // initiate variable with zero
     widget->m_showMask = 0;
 
@@ -190,7 +204,7 @@ void MainWindow::setDockOptions()
 void MainWindow::changeOrientation()
 {
     widget->changeOrientation();
-    m_statusLabel.clear();
+    m_statusLabel.setText(generateGroundString());
 }
 
 void MainWindow::poligonize()
@@ -205,17 +219,27 @@ void MainWindow::detectSupportedTriangles()
     QString str;
     if (area < DBL_EPSILON)
     {
-        str = "No support material needed";
+        str = "; No support material needed";
     }
     else
     {
         double totalArea = widget->totalArea();
 
-        str = QString("Area of supported/total triangles: %1/%2 (%3%)")
+        str = QString("; Area of supported/total triangles: %1/%2 (%3%)")
                 .arg(area).arg(totalArea).arg(static_cast<uint32_t>(100 * area/totalArea));
     }
 
-    m_statusLabel.setText(str);
+    m_statusLabel.setText(generateGroundString() + str);
+}
+
+void MainWindow::editGroundHeight()
+{
+    bool ok;
+    double oldValue = widget->groundHeight();
+    double newValue = QInputDialog::getDouble(this, "Ground", "[mm]", oldValue,
+                                              -DBL_MAX, DBL_MAX, 4, &ok, Qt::MSWindowsFixedSizeDialogHint);
+    if (ok && fabs(oldValue - newValue) > DBL_EPSILON)
+       widget->setGroundHeight(newValue);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *pe)

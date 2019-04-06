@@ -52,6 +52,8 @@ private:
 	// shifts to set the center of mesh on the point of origin
 	QPoint ptrMousePosition;	// the last saved mouse position
 
+    bool vertexOnTheGround(size_t iVert);
+
     void scaleUp();
     void scaleDown();
     void rotateUpX();
@@ -96,6 +98,10 @@ public:
     bool poligonize(double angleInRadians = 0.9);
     double detectSupportedTriangles();
     void keyPressEvent(QKeyEvent* pe) override;
+
+    inline double groundValue() const {return m_boundBoxMin.z;}
+    inline double groundHeight() {return m_groundHeight;}
+    void setGroundHeight(double value);
 
     inline double totalArea() {return m_totalArea;}
 

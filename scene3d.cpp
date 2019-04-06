@@ -178,6 +178,19 @@ void Scene3D::updateForDraw()
     }
 }
 
+void Scene3D::setGroundHeight(double value)
+{
+    m_groundHeight = value;
+}
+
+bool Scene3D::vertexOnTheGround(size_t iVert)
+{
+    if (iVert < m_vertices.size())
+        if (m_vertices[iVert].z - m_boundBoxMin.z < m_groundHeight)
+            return true;
+    return false;
+}
+
 void Scene3D::scaleUp()
 {
     m_scale = m_scale * 1.1;
@@ -253,7 +266,7 @@ void Scene3D::defaultScene()
     m_translX = 0;
     m_translZ = 0;
     m_scale = 1.0;
-    m_groundHeight = 0.0;
+    m_groundHeight = 0.01;
     m_boundBoxMin = { DBL_MAX, DBL_MAX, DBL_MAX};
     m_boundBoxMax = {-DBL_MAX,-DBL_MAX,-DBL_MAX};
 }
@@ -374,7 +387,7 @@ bool Scene3D::fitModel()
         m_normalIndices[I + 1] = I + 1;
     }
 
-    // calculate vertices for ground
+    // process ground
     {
         double minX = m_boundBoxMin.x;
         double minY = m_boundBoxMin.y;
@@ -412,22 +425,22 @@ bool Scene3D::fitModel()
         for (size_t i = 1; i < stepsX; ++i)
         {
             double x = minX + i*stepSize;
-            m_groundVertices.push_back({x, minY, m_groundHeight});
-            m_groundVertices.push_back({x, maxY, m_groundHeight});
+            m_groundVertices.push_back({x, minY, m_boundBoxMin.z});
+            m_groundVertices.push_back({x, maxY, m_boundBoxMin.z});
         }
         for (size_t i = 1; i < stepsY; ++i)
         {
             double y = minY + i*stepSize;
-            m_groundVertices.push_back({minX, y, m_groundHeight});
-            m_groundVertices.push_back({maxX, y, m_groundHeight});
+            m_groundVertices.push_back({minX, y, m_boundBoxMin.z});
+            m_groundVertices.push_back({maxX, y, m_boundBoxMin.z});
         }
 
         m_groundIndices.clear();
         m_groundIndices.resize(m_groundVertices.size());
         for (uint32_t i = 0; i < m_groundVertices.size(); ++i)
             m_groundIndices[i] = i;
-    }
 
+    }
     return true;
 }
 
@@ -569,6 +582,13 @@ double Scene3D::detectSupportedTriangles()
 
     for (uint32_t i = 0; i < m_normals.size(); ++i)
     {
+        const uint32_t *tri = m_triangles[i].coord;
+        if (vertexOnTheGround(tri[0]) && vertexOnTheGround(tri[1]) && vertexOnTheGround(tri[2]))
+        {
+            m_isTriangleSupported.push_back(false);
+            continue; // doesn't need support as it lies on the ground
+        }
+
         const common::Vector &nor = m_normals[i];
         if (nor.z < cosValue)
         {
