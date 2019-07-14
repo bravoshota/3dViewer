@@ -42,7 +42,7 @@ private:
     std::vector<common::Triangle>      m_drawTriangles;
     std::vector<uint8_t>               m_drawColor;
 
-    common::Vector                     m_rotateModel;
+    common::Vector                     m_buildDirection;
     common::Vector                     m_rotate;         // the rotation angle
     GLdouble                           m_translX;        // translation by Z axis
     GLdouble                           m_translZ;        // translation by Z axis
@@ -77,7 +77,6 @@ private:
     void rotateModelDownY();
     void rotateModelUpZ();
     void rotateModelDownZ();
-    void applyModelRotation();
 
     void drawAxis();
     void drawWireframe();
@@ -108,6 +107,7 @@ public:
     void changeOrientation();
     bool poligonize(double angleInRadians = 0.9);
     double detectSupportedTriangles();
+    void applyModelRotation();
 
     void keyPressEvent(QKeyEvent* pe) override;
     void keyReleaseEvent(QKeyEvent *re) override;
@@ -118,4 +118,5 @@ public:
 
     inline double totalArea() {return m_totalArea;}
     inline int &showMask() {return m_showMask;}
+    inline common::Vertex &buildDirection() {return m_buildDirection;}
 };

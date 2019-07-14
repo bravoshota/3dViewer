@@ -96,10 +96,11 @@ void Scene3D::mouseMoveEvent(QMouseEvent* pe)
     if (QApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) == true)
     {
         // calculate rotation by X axis
-        m_rotateModel.x += 180.0 * static_cast<GLdouble>(pe->y() - ptrMousePosition.y()) / height();
+        m_buildDirection.x += 180.0 * static_cast<GLdouble>(pe->y() - ptrMousePosition.y()) / height();
         // calculate rotation by Z axis
-        m_rotateModel.z += 180.0 * static_cast<GLdouble>(pe->x() - ptrMousePosition.x()) / width();
+        m_buildDirection.z += 180.0 * static_cast<GLdouble>(pe->x() - ptrMousePosition.x()) / width();
         applyModelRotation();
+        updateForDraw();
     }
     else
     {
@@ -273,7 +274,7 @@ void Scene3D::translateRight()
 // reset to default
 void Scene3D::defaultScene()
 {
-    m_rotateModel = {0.0, 0.0, 0.0};
+    m_buildDirection = {0.0, 0.0, 0.0};
     m_rotate = {-90.0, 0.0, 0.0};
     m_translX = 0;
     m_translZ = 0;
@@ -286,38 +287,44 @@ void Scene3D::defaultScene()
 
 void Scene3D::rotateModelUpX()
 {
-    m_rotateModel.x += 1.0;
+    m_buildDirection.x += 1.0;
     applyModelRotation();
+    updateForDraw();
 }
 
 void Scene3D::rotateModelDownX()
 {
-    m_rotateModel.x -= 1.0;
+    m_buildDirection.x -= 1.0;
     applyModelRotation();
+    updateForDraw();
 }
 
 void Scene3D::rotateModelUpY()
 {
-    m_rotateModel.y += 1.0;
+    m_buildDirection.y += 1.0;
     applyModelRotation();
+    updateForDraw();
 }
 
 void Scene3D::rotateModelDownY()
 {
-    m_rotateModel.y -= 1.0;
+    m_buildDirection.y -= 1.0;
     applyModelRotation();
+    updateForDraw();
 }
 
 void Scene3D::rotateModelUpZ()
 {
-    m_rotateModel.z += 1.0;
+    m_buildDirection.z += 1.0;
     applyModelRotation();
+    updateForDraw();
 }
 
 void Scene3D::rotateModelDownZ()
 {
-    m_rotateModel.z -= 1.0;
+    m_buildDirection.z -= 1.0;
     applyModelRotation();
+    updateForDraw();
 }
 
 void Scene3D::applyModelRotation()
@@ -326,8 +333,8 @@ void Scene3D::applyModelRotation()
 
     common::Matrix rotX;
     {
-        double cos_x = cos(m_rotateModel.x / 180.0 * M_PI);
-        double sin_x = sin(m_rotateModel.x / 180.0 * M_PI);
+        double cos_x = cos(m_buildDirection.x / 180.0 * M_PI);
+        double sin_x = sin(m_buildDirection.x / 180.0 * M_PI);
         rotX.coord[0][0] = 1.0;
         rotX.coord[1][1] = cos_x;
         rotX.coord[1][2] =-sin_x;
@@ -337,8 +344,8 @@ void Scene3D::applyModelRotation()
 
     common::Matrix rotY;
     {
-        double cos_y = cos(m_rotateModel.y / 180.0 * M_PI);
-        double sin_y = sin(m_rotateModel.y / 180.0 * M_PI);
+        double cos_y = cos(m_buildDirection.y / 180.0 * M_PI);
+        double sin_y = sin(m_buildDirection.y / 180.0 * M_PI);
         rotY.coord[0][0] = cos_y;
         rotY.coord[0][2] = sin_y;
         rotY.coord[1][1] = 1.0;
@@ -348,8 +355,8 @@ void Scene3D::applyModelRotation()
 
     common::Matrix rotZ;
     {
-        double cos_z = cos(m_rotateModel.z / 180.0 * M_PI);
-        double sin_z = sin(m_rotateModel.z / 180.0 * M_PI);
+        double cos_z = cos(m_buildDirection.z / 180.0 * M_PI);
+        double sin_z = sin(m_buildDirection.z / 180.0 * M_PI);
         rotZ.coord[0][0] = cos_z;
         rotZ.coord[0][1] =-sin_z;
         rotZ.coord[1][0] = sin_z;
@@ -363,8 +370,6 @@ void Scene3D::applyModelRotation()
         auto &vertex = m_vertices[i];
         vertex = vertexOrig * rotX * rotY * rotZ;
     }
-
-    updateForDraw();
 }
 
 // Draw the axis
@@ -752,7 +757,6 @@ void Scene3D::keyPressEvent(QKeyEvent *pe)
         case Qt::Key_Down:  translateDown();  break;
         case Qt::Key_Left:  translateLeft();  break;
         case Qt::Key_Right: translateRight(); break;
-        case Qt::Key_Space: defaultScene();   break;
         default: return;
         }
     }

@@ -26,15 +26,18 @@ SOURCES += \
     functions.cpp \
     mainWindow.cpp \
     scene3d.cpp \
-    common.cpp
+    common.cpp \
+    dialogbuildorientation.cpp
 
 HEADERS += \
     functions.h \
     mainWindow.h \
     scene3d.h \
-    common.h
+    common.h \
+    dialogbuildorientation.h
 
 FORMS += \
-    scene3d.ui
+    scene3d.ui \
+    dialogbuildorientation.ui
 
 win32: LIBS += -lOpenGL32

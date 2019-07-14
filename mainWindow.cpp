@@ -2,6 +2,7 @@
 #include "scene3d.h"
 #include "mainWindow.h"
 #include "functions.h"
+#include "dialogbuildorientation.h"
 #include <QMenuBar>
 #include <QMenu>
 #include <QMessageBox>
@@ -40,6 +41,9 @@ MainWindow::MainWindow()
     ////////////////////////////////////
     // detect areas which need support
     action = m_menuActions->addAction(tr("Edit ground height"), this, &MainWindow::editGroundHeight);
+    action->setEnabled(false);
+    // modify build direction
+    action = m_menuActions->addAction(tr("Modify build direction"), this, &MainWindow::modifyBuildDirection);
     action->setEnabled(false);
 
     // create widget (Scene3D object) to show the 3D-objects
@@ -133,7 +137,9 @@ void MainWindow::openModel()
             m_menuActions->actions()[0]->setEnabled(false);
             m_menuActions->actions()[1]->setEnabled(false);
             m_menuActions->actions()[2]->setEnabled(false);
-            m_menuActions->actions()[3]->setEnabled(false);
+            // [3] skip separator
+            m_menuActions->actions()[4]->setEnabled(false);
+            m_menuActions->actions()[5]->setEnabled(false);
             return;
         }
         if (!widget->setModel(std::move(vertices), std::move(faces)) ||
@@ -141,7 +147,9 @@ void MainWindow::openModel()
             m_menuActions->actions()[0]->setEnabled(false);
             m_menuActions->actions()[1]->setEnabled(false);
             m_menuActions->actions()[2]->setEnabled(false);
-            m_menuActions->actions()[3]->setEnabled(false);
+            // [3] skip separator
+            m_menuActions->actions()[4]->setEnabled(false);
+            m_menuActions->actions()[5]->setEnabled(false);
             QMessageBox::warning(nullptr, "ERROR!", "Incorrect format of the model!");
             return;
         }
@@ -152,6 +160,7 @@ void MainWindow::openModel()
     m_menuActions->actions()[2]->setEnabled(true);
     // [3] skip separator
     m_menuActions->actions()[4]->setEnabled(true);
+    m_menuActions->actions()[5]->setEnabled(true);
 
     // enable and set on 'Axis' checker
     m_menuOptions->actions()[0]->setChecked(true);
@@ -241,7 +250,20 @@ void MainWindow::editGroundHeight()
     double newValue = QInputDialog::getDouble(this, "Ground", "[mm]", oldValue,
                                               -DBL_MAX, DBL_MAX, 4, &ok, Qt::MSWindowsFixedSizeDialogHint);
     if (ok && fabs(oldValue - newValue) > DBL_EPSILON)
-       widget->setGroundHeight(newValue);
+        widget->setGroundHeight(newValue);
+}
+
+void MainWindow::modifyBuildDirection()
+{
+    DialogBuildOrientation dialog(this, widget->buildDirection());
+    if (dialog.exec() == QDialog::Accepted)
+    {
+        dialog.provideValues();
+        widget->applyModelRotation();
+        widget->fitModel();
+        widget->updateAll();
+        widget->updateGL();
+    }
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *pe)
