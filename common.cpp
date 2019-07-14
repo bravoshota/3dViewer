@@ -3,6 +3,13 @@
 
 namespace common {
 
+Matrix::Matrix()
+{
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+            coord[i][j] = 0.0;
+}
+
 Vertex::Vertex() : x(0), y(0), z(0)
 {
 }
@@ -26,9 +33,23 @@ Vertex Vertex::operator +(const Vertex &other) const
     return {x + other.x, y + other.y, z + other.z};
 }
 
+Vertex Vertex::operator -(const Vertex &other) const
+{
+    return {x - other.x, y - other.y, z - other.z};
+}
+
 Vertex Vertex::operator *(double val) const
 {
     return {x * val, y * val, z * val};
+}
+
+Vertex Vertex::operator *(const Matrix &mat) const
+{
+    Vertex res;
+    res.x = x * mat.coord[0][0] + y * mat.coord[0][1] + z * mat.coord[0][2];
+    res.y = x * mat.coord[1][0] + y * mat.coord[1][1] + z * mat.coord[1][2];
+    res.z = x * mat.coord[2][0] + y * mat.coord[2][1] + z * mat.coord[2][2];
+    return res;
 }
 
 Vertex Vertex::operator /(double val) const
@@ -41,6 +62,14 @@ Vertex &Vertex::operator +=(const Vertex &other)
     x += other.x;
     y += other.y;
     z += other.z;
+    return *this;
+}
+
+Vertex &Vertex::operator -=(const Vertex &other)
+{
+    x -= other.x;
+    y -= other.y;
+    z -= other.z;
     return *this;
 }
 

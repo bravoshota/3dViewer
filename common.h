@@ -9,6 +9,11 @@
 
 namespace common {
 
+struct Matrix {
+    Matrix();
+    double coord[3][3];
+};
+
 struct Vertex {
     double x;
     double y;
@@ -19,9 +24,12 @@ struct Vertex {
     Vertex(float *coords);
 
     Vertex operator + (const Vertex &other) const;
+    Vertex operator - (const Vertex &other) const;
     Vertex operator * (double val) const;
+    Vertex operator * (const Matrix &mat) const;
     Vertex operator / (double val) const;
     Vertex &operator += (const Vertex &other);
+    Vertex &operator -= (const Vertex &other);
     Vertex &operator *= (double val);
     Vertex &operator /= (double val);
 };

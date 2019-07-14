@@ -6,6 +6,7 @@
 // Entry point of application
 int main(int argc, char** argv)
 {
+    QCoreApplication::addLibraryPath("./");
     QApplication app(argc, argv);
 
     // Create MainWindow object

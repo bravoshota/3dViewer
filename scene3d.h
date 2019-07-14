@@ -17,6 +17,7 @@ class Scene3D : public QGLWidget
 {
 private:
     // general data
+    std::vector<common::Vertex>        m_verticesOrig;
     std::vector<common::Vertex>        m_vertices;
     std::vector<common::Triangle>      m_triangles;
     std::vector<common::Vector>        m_normals;
@@ -37,20 +38,22 @@ private:
     std::vector<common::Vertex>        m_groundVertices;
     std::vector<uint32_t>              m_groundIndices;
     // drawing helpers
-    std::vector<common::Vertex>   m_drawVertices;
-    std::vector<common::Triangle> m_drawTriangles;
-    std::vector<uint8_t>          m_drawColor;
+    std::vector<common::Vertex>        m_drawVertices;
+    std::vector<common::Triangle>      m_drawTriangles;
+    std::vector<uint8_t>               m_drawColor;
 
-    GLdouble m_rotateX;				// the rotation angle of X axis
-    GLdouble m_rotateY;				// the rotation angle of Y axis
-    GLdouble m_rotateZ;				// the rotation angle of Z axis
-    GLdouble m_translX;				// translation by Z axis
-    GLdouble m_translZ;				// translation by Z axis
-    GLdouble m_scale;				// scale of image
-    GLdouble m_scaleDefault;        // default scale for the model
+    common::Vector                     m_rotateModel;
+    common::Vector                     m_rotate;         // the rotation angle
+    GLdouble                           m_translX;        // translation by Z axis
+    GLdouble                           m_translZ;        // translation by Z axis
+    GLdouble                           m_scale;          // scale of image
+    GLdouble                           m_scaleDefault;   // default scale for the model
 
 	// shifts to set the center of mesh on the point of origin
 	QPoint ptrMousePosition;	// the last saved mouse position
+
+    int m_showMask;
+    bool m_needsUpdate;
 
     bool vertexOnTheGround(size_t iVert);
 
@@ -68,7 +71,15 @@ private:
     void translateRight();
     void defaultScene();
 
-	void drawAxis();
+    void rotateModelUpX();
+    void rotateModelDownX();
+    void rotateModelUpY();
+    void rotateModelDownY();
+    void rotateModelUpZ();
+    void rotateModelDownZ();
+    void applyModelRotation();
+
+    void drawAxis();
     void drawWireframe();
     void drawTriangles();
     void drawNormals();
@@ -92,18 +103,19 @@ public:
     Scene3D(QWidget *parent = nullptr);
     bool setModel(std::vector<common::Vertex> &&vertices,
                   std::vector<common::Triangle> &&faces);
-    bool fitModel();
+    bool fitModel(bool firstLoad = false);
     bool updateAll();
     void changeOrientation();
     bool poligonize(double angleInRadians = 0.9);
     double detectSupportedTriangles();
+
     void keyPressEvent(QKeyEvent* pe) override;
+    void keyReleaseEvent(QKeyEvent *re) override;
 
     inline double groundValue() const {return m_boundBoxMin.z;}
     inline double groundHeight() {return m_groundHeight;}
     void setGroundHeight(double value);
 
     inline double totalArea() {return m_totalArea;}
-
-    int m_showMask;
+    inline int &showMask() {return m_showMask;}
 };

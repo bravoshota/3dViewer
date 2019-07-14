@@ -28,5 +28,6 @@ private slots:
     void poligonize();
     void detectSupportedTriangles();
     void editGroundHeight();
-    void keyPressEvent(QKeyEvent* pe);
+    void keyPressEvent(QKeyEvent* pe) override;
+    void keyReleaseEvent(QKeyEvent* re) override;
 };

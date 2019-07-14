@@ -2,6 +2,7 @@
 #include "functions.h"
 #include <QDebug>
 #include <QMouseEvent>
+#include <QApplication>
 #include <unordered_map>
 #include <fstream>
 #include <float.h>
@@ -65,9 +66,9 @@ void Scene3D::paintGL()
     glTranslated(m_translX, 0.0, 0.0);
     glTranslated(0.0, m_translZ, 0.0);
     // apply the rotations
-    glRotated(m_rotateX, 1.0, 0.0, 0.0);
-    glRotated(m_rotateY, 0.0, 1.0, 0.0);
-    glRotated(m_rotateZ, 0.0, 0.0, 1.0);
+    glRotated(m_rotate.x, 1.0, 0.0, 0.0);
+    glRotated(m_rotate.y, 0.0, 1.0, 0.0);
+    glRotated(m_rotate.z, 0.0, 0.0, 1.0);
 
     // draw the elements using the 'elements visibility' variable
     drawAxis();
@@ -93,9 +94,9 @@ void Scene3D::mouseReleaseEvent(QMouseEvent* /*pe*/)
 void Scene3D::mouseMoveEvent(QMouseEvent* pe)
 {
     // calculate rotation by X axis
-    m_rotateX += 180.0 * static_cast<GLdouble>(pe->y() - ptrMousePosition.y()) / height();
+    m_rotate.x += 180.0 * static_cast<GLdouble>(pe->y() - ptrMousePosition.y()) / height();
     // calculate rotation by Z axis
-    m_rotateZ += 180.0 * static_cast<GLdouble>(pe->x() - ptrMousePosition.x()) / width();
+    m_rotate.z += 180.0 * static_cast<GLdouble>(pe->x() - ptrMousePosition.x()) / width();
     // save the mouse position
     ptrMousePosition = pe->pos();
     // draw the scene
@@ -208,32 +209,32 @@ void Scene3D::scaleDown()
 // rotation
 void Scene3D::rotateUpX()
 {
-    m_rotateX += 1.0;
+    m_rotate.x += 1.0;
 }
 
 void Scene3D::rotateDownX()
 {
-    m_rotateX -= 1.0;
+    m_rotate.x -= 1.0;
 }
 
 void Scene3D::rotateUpY()
 {
-    m_rotateY += 1.0;
+    m_rotate.y += 1.0;
 }
 
 void Scene3D::rotateDownY()
 {
-    m_rotateY -= 1.0;
+    m_rotate.y -= 1.0;
 }
 
 void Scene3D::rotateUpZ()
 {
-    m_rotateZ += 1.0;
+    m_rotate.z += 1.0;
 }
 
 void Scene3D::rotateDownZ()
 {
-    m_rotateZ -= 1.0;
+    m_rotate.z -= 1.0;
 }
 
 // translation
@@ -260,19 +261,102 @@ void Scene3D::translateRight()
 // reset to default
 void Scene3D::defaultScene()
 {
-    m_rotateX =-90;
-    m_rotateY = 0;
-    m_rotateZ = 0;
+    m_rotateModel = {0.0, 0.0, 0.0};
+    m_rotate = {-90.0, 0.0, 0.0};
     m_translX = 0;
     m_translZ = 0;
     m_scale = 1.0;
     m_groundHeight = 0.01;
     m_boundBoxMin = { DBL_MAX, DBL_MAX, DBL_MAX};
     m_boundBoxMax = {-DBL_MAX,-DBL_MAX,-DBL_MAX};
+    m_needsUpdate = false;
+}
+
+void Scene3D::rotateModelUpX()
+{
+    m_rotateModel.x += 1.0;
+    applyModelRotation();
+}
+
+void Scene3D::rotateModelDownX()
+{
+    m_rotateModel.x -= 1.0;
+    applyModelRotation();
+}
+
+void Scene3D::rotateModelUpY()
+{
+    m_rotateModel.y += 1.0;
+    applyModelRotation();
+}
+
+void Scene3D::rotateModelDownY()
+{
+    m_rotateModel.y -= 1.0;
+    applyModelRotation();
+}
+
+void Scene3D::rotateModelUpZ()
+{
+    m_rotateModel.z += 1.0;
+    applyModelRotation();
+}
+
+void Scene3D::rotateModelDownZ()
+{
+    m_rotateModel.z -= 1.0;
+    applyModelRotation();
+}
+
+void Scene3D::applyModelRotation()
+{
+    m_needsUpdate = true;
+
+    common::Matrix rotX;
+    {
+        double cos_x = cos(m_rotateModel.x / 180.0 * M_PI);
+        double sin_x = sin(m_rotateModel.x / 180.0 * M_PI);
+        rotX.coord[0][0] = 1.0;
+        rotX.coord[1][1] = cos_x;
+        rotX.coord[1][2] =-sin_x;
+        rotX.coord[2][1] = sin_x;
+        rotX.coord[2][2] = cos_x;
+    }
+
+    common::Matrix rotY;
+    {
+        double cos_y = cos(m_rotateModel.y / 180.0 * M_PI);
+        double sin_y = sin(m_rotateModel.y / 180.0 * M_PI);
+        rotY.coord[0][0] = cos_y;
+        rotY.coord[0][2] = sin_y;
+        rotY.coord[1][1] = 1.0;
+        rotY.coord[2][0] =-sin_y;
+        rotY.coord[2][2] = cos_y;
+    }
+
+    common::Matrix rotZ;
+    {
+        double cos_z = cos(m_rotateModel.z / 180.0 * M_PI);
+        double sin_z = sin(m_rotateModel.z / 180.0 * M_PI);
+        rotZ.coord[0][0] = cos_z;
+        rotZ.coord[0][1] =-sin_z;
+        rotZ.coord[1][0] = sin_z;
+        rotZ.coord[1][1] = cos_z;
+        rotZ.coord[2][2] = 1.0;
+    }
+
+    for (size_t i = 0; i < m_vertices.size(); ++i)
+    {
+        const auto &vertexOrig = m_verticesOrig[i];
+        auto &vertex = m_vertices[i];
+        vertex = vertexOrig * rotX * rotY * rotZ;
+    }
+
+    updateForDraw();
 }
 
 // Draw the axis
-void Scene3D::drawAxis() 
+void Scene3D::drawAxis()
 {
     if(!(m_showMask & shAxis))
         return;
@@ -286,16 +370,16 @@ void Scene3D::drawAxis()
 
     // the X axis
     glColor3ub(255, 0, 0);
-    glVertex3d( axisLen, 0.0, 0.0);
-    glVertex3d(-axisLen, 0.0, 0.0);
+    glVertex3d(0.0, 0.0, 0.0);
+    glVertex3d(axisLen, 0.0, 0.0);
     // the Y axis
     glColor3d(0, 255, 0);
+    glVertex3d(0.0, 0.0, 0.0);
     glVertex3d(0.0, axisLen, 0.0);
-    glVertex3d(0.0,-axisLen, 0.0);
     // the Z axis
     glColor3ub(0, 0, 255);
+    glVertex3d(0.0, 0.0, 0.0);
     glVertex3d(0.0, 0.0, axisLen);
-    glVertex3d(0.0, 0.0,-axisLen);
 
     // end of the 'lines' mode
     glEnd();
@@ -307,10 +391,10 @@ bool Scene3D::setModel(std::vector<common::Vertex> &&vertices,
     std::swap(m_vertices, vertices);
     std::swap(m_triangles, faces);
     defaultScene();
-    return fitModel();
+    return fitModel(true);
 }
 
-bool Scene3D::fitModel()
+bool Scene3D::fitModel(bool firstLoad)
 {
     m_totalArea = 0.0;
     m_supportedTriangles.clear();
@@ -342,6 +426,21 @@ bool Scene3D::fitModel()
             m_boundBoxMin.z = p.z;
         if (m_boundBoxMax.z < p.z)
             m_boundBoxMax.z = p.z;
+    }
+
+    if (firstLoad)
+    {
+        // fit vertices coordinates to the center point
+        {
+            common::Vertex centerPoint = (m_boundBoxMin + m_boundBoxMax) / 2;
+            for (auto &vert : m_vertices)
+                vert -= centerPoint;
+
+            m_boundBoxMin -= centerPoint;
+            m_boundBoxMax -= centerPoint;
+        }
+
+        m_verticesOrig = m_vertices;
     }
 
     auto fixScale = [&](double val)
@@ -610,27 +709,53 @@ double Scene3D::detectSupportedTriangles()
 
 void Scene3D::keyPressEvent(QKeyEvent *pe)
 {
-    // set the actions of keyboard keys
-    switch (pe->key())
+    if (QApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) == true)
     {
-    case Qt::Key_Plus:  scaleUp();        break;
-    case Qt::Key_Equal: scaleUp();        break;
-    case Qt::Key_Minus: scaleDown();      break;
-    case Qt::Key_W:     rotateDownX();    break;
-    case Qt::Key_S:     rotateUpX();      break;
-    case Qt::Key_A:     rotateUpZ();      break;
-    case Qt::Key_D:     rotateDownZ();    break;
-    case Qt::Key_Q:     rotateUpY();      break;
-    case Qt::Key_E:     rotateDownY();    break;
-    case Qt::Key_P:     poligonize();     break;
-    case Qt::Key_Up:    translateUp();    break;
-    case Qt::Key_Down:  translateDown();  break;
-    case Qt::Key_Left:  translateLeft();  break;
-    case Qt::Key_Right: translateRight(); break;
-    case Qt::Key_Space: defaultScene();   break;
-    default: return;
+        switch (pe->key())
+        {
+        case Qt::Key_S:     rotateModelUpX();      break;
+        case Qt::Key_W:     rotateModelDownX();    break;
+        case Qt::Key_A:     rotateModelUpZ();      break;
+        case Qt::Key_D:     rotateModelDownZ();    break;
+        case Qt::Key_Q:     rotateModelUpY();      break;
+        case Qt::Key_E:     rotateModelDownY();    break;
+        default: return;
+        }
+    }
+    else
+    {
+        switch (pe->key())
+        {
+        case Qt::Key_Plus:  scaleUp();        break;
+        case Qt::Key_Equal: scaleUp();        break;
+        case Qt::Key_Minus: scaleDown();      break;
+        case Qt::Key_W:     rotateDownX();    break;
+        case Qt::Key_S:     rotateUpX();      break;
+        case Qt::Key_A:     rotateUpZ();      break;
+        case Qt::Key_D:     rotateDownZ();    break;
+        case Qt::Key_Q:     rotateUpY();      break;
+        case Qt::Key_E:     rotateDownY();    break;
+        case Qt::Key_P:     poligonize();     break;
+        case Qt::Key_Up:    translateUp();    break;
+        case Qt::Key_Down:  translateDown();  break;
+        case Qt::Key_Left:  translateLeft();  break;
+        case Qt::Key_Right: translateRight(); break;
+        case Qt::Key_Space: defaultScene();   break;
+        default: return;
+        }
     }
     updateGL();
+}
+
+void Scene3D::keyReleaseEvent(QKeyEvent *re)
+{
+    if (re->key() == Qt::Key_Shift && m_needsUpdate)
+    {
+        m_needsUpdate = false;
+        fitModel();
+        updateAll();
+        updateGL();
+    }
 }
 
 // Draw the wireframe of mesh

@@ -133,6 +133,7 @@ void MainWindow::openModel()
             m_menuActions->actions()[0]->setEnabled(false);
             m_menuActions->actions()[1]->setEnabled(false);
             m_menuActions->actions()[2]->setEnabled(false);
+            m_menuActions->actions()[3]->setEnabled(false);
             return;
         }
         if (!widget->setModel(std::move(vertices), std::move(faces)) ||
@@ -140,6 +141,7 @@ void MainWindow::openModel()
             m_menuActions->actions()[0]->setEnabled(false);
             m_menuActions->actions()[1]->setEnabled(false);
             m_menuActions->actions()[2]->setEnabled(false);
+            m_menuActions->actions()[3]->setEnabled(false);
             QMessageBox::warning(nullptr, "ERROR!", "Incorrect format of the model!");
             return;
         }
@@ -148,7 +150,7 @@ void MainWindow::openModel()
     m_menuActions->actions()[0]->setEnabled(true);
     m_menuActions->actions()[1]->setEnabled(true);
     m_menuActions->actions()[2]->setEnabled(true);
-    // [3]: skip separator;
+    // [3] skip separator
     m_menuActions->actions()[4]->setEnabled(true);
 
     // enable and set on 'Axis' checker
@@ -179,23 +181,23 @@ void MainWindow::setDockOptions()
     // use the 'Elements' menu
     QList<QAction*> actions = m_menuOptions->actions();
     // initiate variable with zero
-    widget->m_showMask = 0;
+    widget->showMask() = 0;
 
     // set the mask of 'Axis' item
     if (actions[0]->isChecked())
-        widget->m_showMask |= shAxis;
+        widget->showMask() |= shAxis;
     // set the mask of 'Wireframe' item
     if (actions[1]->isChecked())
-        widget->m_showMask |= shWireframe;
+        widget->showMask() |= shWireframe;
     // set the mask of 'Triangles' item
     if (actions[2]->isChecked())
-        widget->m_showMask |= shTriangles;
+        widget->showMask() |= shTriangles;
     // set the mask of 'Normals' item
     if (actions[3]->isChecked())
-        widget->m_showMask |= shNormals;
+        widget->showMask() |= shNormals;
     // set the mask of 'Ground' item
     if (actions[4]->isChecked())
-        widget->m_showMask |= shGround;
+        widget->showMask() |= shGround;
 
     // update the showed elements
     widget->update();
@@ -249,4 +251,9 @@ void MainWindow::keyPressEvent(QKeyEvent *pe)
     case Qt::Key_N: openModel(); break;
     default: widget->keyPressEvent(pe); break;
     }
+}
+
+void MainWindow::keyReleaseEvent(QKeyEvent *re)
+{
+    widget->keyReleaseEvent(re);
 }
