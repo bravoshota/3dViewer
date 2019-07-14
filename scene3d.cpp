@@ -93,10 +93,22 @@ void Scene3D::mouseReleaseEvent(QMouseEvent* /*pe*/)
 // Process rotation by mouse
 void Scene3D::mouseMoveEvent(QMouseEvent* pe)
 {
-    // calculate rotation by X axis
-    m_rotate.x += 180.0 * static_cast<GLdouble>(pe->y() - ptrMousePosition.y()) / height();
-    // calculate rotation by Z axis
-    m_rotate.z += 180.0 * static_cast<GLdouble>(pe->x() - ptrMousePosition.x()) / width();
+    if (QApplication::keyboardModifiers().testFlag(Qt::ShiftModifier) == true)
+    {
+        // calculate rotation by X axis
+        m_rotateModel.x += 180.0 * static_cast<GLdouble>(pe->y() - ptrMousePosition.y()) / height();
+        // calculate rotation by Z axis
+        m_rotateModel.z += 180.0 * static_cast<GLdouble>(pe->x() - ptrMousePosition.x()) / width();
+        applyModelRotation();
+    }
+    else
+    {
+        // calculate rotation by X axis
+        m_rotate.x += 180.0 * static_cast<GLdouble>(pe->y() - ptrMousePosition.y()) / height();
+        // calculate rotation by Z axis
+        m_rotate.z += 180.0 * static_cast<GLdouble>(pe->x() - ptrMousePosition.x()) / width();
+    }
+
     // save the mouse position
     ptrMousePosition = pe->pos();
     // draw the scene
